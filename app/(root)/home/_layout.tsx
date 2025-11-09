@@ -87,6 +87,12 @@ export default function HomeLayout() {
 				}}
 			/>
 			<Stack.Screen
+				name="sponsored"
+				options={{
+					headerShown: false,
+				}}
+			/>
+			<Stack.Screen
 				name="notifications"
 				options={{
 					headerTitle: 'Notifications',
@@ -102,6 +108,12 @@ export default function HomeLayout() {
 			/>
 			<Stack.Screen
 				name="category/[id]"
+				options={{
+					headerShown: false,
+				}}
+			/>
+			<Stack.Screen
+				name="section/[id]"
 				options={{
 					headerShown: false,
 				}}

@@ -17,6 +17,8 @@ export interface ProductFilters {
 	page?: number;
 	limit?: number;
 	sort?: string;
+	featured?: boolean;
+	inStock?: boolean;
 }
 
 export interface ProductFacets {

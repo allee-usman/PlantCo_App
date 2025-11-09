@@ -3,11 +3,13 @@ interface SectionHeaderProps {
 	label: string;
 	rightButton?: boolean;
 	rightBtnLabel?: string;
+	onPress?: () => void;
 }
 const SectionHeader = ({
 	label,
 	rightButton,
 	rightBtnLabel,
+	onPress,
 }: SectionHeaderProps) => {
 	return (
 		<View className="flex-row items-center justify-between">
@@ -19,7 +21,7 @@ const SectionHeader = ({
 			</View>
 			{rightButton && (
 				<TouchableOpacity
-					onPress={() => {}}
+					onPress={onPress}
 					activeOpacity={0.7}
 					className="py-[6px] items-center flex-row"
 					// className="border-[1.125px] border-gray-300 dark:border-gray-600 rounded-full px-[10px] py-[6px]"

@@ -1,9 +1,12 @@
 import CustomHeader from '@/components/CustomHeader';
-import ProductCard from '@/components/ProductCard';
+import LottieLoadingIndicator from '@/components/LottieLoadingIndicator';
+import ProductCard from '@/components/TestingCard';
 import { COLORS } from '@/constants/colors';
-import { useAppSelector } from '@/redux/hooks';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { addToCart } from '@/redux/slices/cartSlice';
 import { RootState } from '@/redux/store';
 import { listProducts } from '@/services/product.services';
+import { toggleWishlist } from '@/services/user.product.services';
 import { IBaseProduct } from '@/types/product.types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,6 +20,7 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 /**
  * Route params expected:
@@ -35,12 +39,21 @@ type Params = {
 const PAGE_LIMIT = 16;
 
 export default function CategoryProductsScreen() {
+	const { width: screenWidth } = useWindowDimensions();
 	const { id: categoryId, name: categoryName } = useLocalSearchParams<Params>();
 	const router = useRouter();
 
+	const dispatch = useAppDispatch();
 	const { user } = useAppSelector((s: RootState) => s.auth);
-	const wishlistIds = user?.wishlist ?? [];
+	const wishlistIds = user?.customerProfile?.wishlist ?? [];
 	const wishlistSet = useMemo(() => new Set(wishlistIds), [wishlistIds]);
+	// track per-item "just added" success state (shows checkmark briefly)
+	const [addedMap, setAddedMap] = useState<Record<string, boolean>>({});
+
+	// store timers so we can clear them on unmount or when re-adding
+	const addedTimersRef = React.useRef<
+		Record<string, ReturnType<typeof setTimeout>>
+	>({});
 
 	const [products, setProducts] = useState<IBaseProduct[]>([]);
 	const [page, setPage] = useState<number>(1);
@@ -49,6 +62,10 @@ export default function CategoryProductsScreen() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+	// track per-item adding state (shows spinner on card)
+	const [addingMap, setAddingMap] = useState<Record<string, boolean>>({});
+
 	const { colorScheme } = useColorScheme();
 	const isDark = colorScheme === 'dark';
 
@@ -155,32 +172,150 @@ export default function CategoryProductsScreen() {
 			// navigate to product details by id only
 			router.push({
 				pathname: '/(root)/home/product/[id]',
-				params: { id: item._id },
+				params: { id: item._id, product: JSON.stringify(item) },
 			});
 		},
 		[router]
 	);
-	const { width: screenWidth } = useWindowDimensions();
+
+	// action: add to cart for an item id (shows spinner)
+	// const handleAddToCart = useCallback(
+	// 	async (productId: string, quantity = 1) => {
+	// 		try {
+	// 			setAddingMap((m) => ({ ...m, [productId]: true }));
+	// 			await dispatch(
+	// 				// dispatch thunk, unwrap optional
+	// 				(addToCart as any)({ productId, quantity })
+	// 			).unwrap?.();
+	// 			Toast.show({
+	// 				type: 'success',
+	// 				text1: 'Added to Cart',
+	// 			});
+	// 		} catch (err: any) {
+	// 			console.error('Add to cart error', err);
+	// 			Toast.show({
+	// 				type: 'error',
+	// 				text1: 'Error',
+	// 				text2:
+	// 					err?.message ||
+	// 					err?.data?.message ||
+	// 					'Failed to add item to cart. Please try again.',
+	// 			});
+	// 		} finally {
+	// 			setAddingMap((m) => ({ ...m, [productId]: false }));
+	// 		}
+	// 	},
+	// 	[dispatch]
+	// );
+	const handleAddToCart = useCallback(
+		async (productId: string, quantity = 1) => {
+			// prevent duplicate calls
+			if (addingMap[productId]) return;
+
+			try {
+				// show spinner on card
+				setAddingMap((m) => ({ ...m, [productId]: true }));
+
+				// dispatch addToCart thunk; use unwrap if available to get throw on error
+				await dispatch((addToCart as any)({ productId, quantity })).unwrap?.();
+
+				// show success toast
+				Toast.show({ type: 'success', text1: 'Added to Cart' });
+
+				// show checkmark briefly
+				setAddedMap((m) => ({ ...m, [productId]: true }));
+
+				// clear any existing timer for this id
+				if (addedTimersRef.current[productId]) {
+					clearTimeout(addedTimersRef.current[productId]);
+				}
+				// auto-clear checkmark after 2s
+				const t = setTimeout(() => {
+					setAddedMap((m) => {
+						const copy = { ...m };
+						delete copy[productId];
+						return copy;
+					});
+					delete addedTimersRef.current[productId];
+				}, 2000);
+				addedTimersRef.current[productId] = t;
+			} catch (err: any) {
+				console.error('Add to cart error', err);
+				Toast.show({
+					type: 'error',
+					text1: 'Error',
+					text2:
+						err?.message ||
+						err?.data?.message ||
+						'Failed to add item to cart. Please try again.',
+				});
+			} finally {
+				// always clear adding spinner
+				setAddingMap((m) => {
+					const copy = { ...m };
+					delete copy[productId];
+					return copy;
+				});
+			}
+		},
+		[dispatch, addingMap]
+	);
+
+	// action: toggle wishlist
+	const handleWishlistToggle = useCallback(async (productId: string) => {
+		try {
+			// optimistic toast; ideally update store/user on success
+			await toggleWishlist(productId, wishlistSet.has(productId));
+			Toast.show({
+				type: 'success',
+				text1: 'Wishlist updated',
+			});
+			// optional: trigger refresh of auth or product lists if needed
+		} catch (err) {
+			console.error('Wishlist toggle failed', err);
+			Toast.show({
+				type: 'error',
+				text1: 'Error',
+				text2: 'Failed to update wishlist',
+			});
+		}
+	}, []);
+
+	const cardWidth = screenWidth / 2 - 20;
 
 	const renderProductItem = useCallback(
-		({ item }: { item: IBaseProduct }) => (
-			<ProductCard
-				product={{
-					id: item._id,
-					name: item.name,
-					price: item.price,
-					compareAtPrice: item.compareAtPrice,
-					image: item.images?.[0]?.url,
-					rating: item.reviewStats?.averageRating,
-					reviewCount: item.reviewStats?.totalReviews,
-					description: item.description,
-					isWishlisted: wishlistSet.has(item._id),
-				}}
-				width={screenWidth / 2 - 24}
-				onPress={() => handleProductPress(item)}
-			/>
-		),
-		[wishlistSet, handleProductPress]
+		({ item }: { item: IBaseProduct }) => {
+			return (
+				<ProductCard
+					image={item.images?.[0]?.url ?? ''}
+					title={item.name}
+					// description={item.description}
+					price={item.price}
+					rating={item.reviewStats?.averageRating}
+					reviewCount={item.reviewStats?.totalReviews}
+					// compareAtPrice={item.compareAtPrice}
+					// discount={item.discount}
+					isWishlisted={wishlistSet.has(item._id)}
+					width={cardWidth}
+					height={cardWidth * 1.5}
+					// inStock={item.inStock}
+					onAddToCart={() => handleAddToCart(item._id)}
+					onWishlistToggle={() => handleWishlistToggle(item._id)}
+					addingToCart={!!addingMap[item._id]}
+					onPress={() => handleProductPress(item)}
+					added={!!addedMap[item._id]}
+				/>
+			);
+		},
+		[
+			wishlistSet,
+			cardWidth,
+			handleAddToCart,
+			handleWishlistToggle,
+			addingMap,
+			handleProductPress,
+			addedMap,
+		]
 	);
 
 	const keyExtractor = (item: IBaseProduct) => item._id;
@@ -204,24 +339,6 @@ export default function CategoryProductsScreen() {
 	return (
 		<View className="flex bg-light-screen dark:bg-gray-800">
 			{/* Header */}
-			{/* <CustomHeader
-				style={{
-					paddingVertical: 12,
-					paddingHorizontal: 16,
-					borderBottomWidth: 1,
-					borderBottomColor: '#eee',
-					backgroundColor: '#fff',
-				}}
-			>
-				<Text style={{ fontSize: 20, fontWeight: '700' }}>
-					{categoryName ?? 'Category'}
-				</Text>
-				{totalCount !== null && (
-					<Text style={{ color: '#666', marginTop: 4 }}>
-						{totalCount} product{totalCount === 1 ? '' : 's'}
-					</Text>
-				)}
-			</CustomHeader> */}
 			<CustomHeader
 				title={categoryName ?? 'Category'}
 				onIconLeftPress={() => {
@@ -240,7 +357,9 @@ export default function CategoryProductsScreen() {
 				<View
 					style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
 				>
-					<ActivityIndicator size="large" color={COLORS.primary} />
+					<View className="flex-1 justify-between items-center">
+						<LottieLoadingIndicator />
+					</View>
 				</View>
 			) : error ? (
 				<View
@@ -267,13 +386,14 @@ export default function CategoryProductsScreen() {
 					contentContainerStyle={{
 						paddingHorizontal: 16,
 						paddingVertical: 12,
-						gap: 12,
+						paddingBottom: 110,
+						gap: 8,
 					}}
 					showsVerticalScrollIndicator={false}
 					numColumns={2}
 					columnWrapperStyle={{
 						justifyContent: 'space-between',
-						marginBottom: 12,
+						// marginBottom: 12,
 					}}
 					onEndReachedThreshold={0.6}
 					onEndReached={loadMore}

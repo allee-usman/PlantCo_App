@@ -8,6 +8,7 @@ interface SectionProps {
 	children: React.ReactNode;
 	headerAction?: boolean;
 	headerActionLabel?: string;
+	onHeaderAction?: () => void; // <- new
 }
 
 const Section: React.FC<SectionProps> = ({
@@ -16,6 +17,7 @@ const Section: React.FC<SectionProps> = ({
 	containerStyle,
 	headerAction,
 	headerActionLabel,
+	onHeaderAction,
 }) => {
 	return (
 		<View>
@@ -25,6 +27,7 @@ const Section: React.FC<SectionProps> = ({
 						label={title}
 						rightButton={headerAction}
 						rightBtnLabel={headerActionLabel}
+						onPress={onHeaderAction}
 					/>
 				</View>
 			)}

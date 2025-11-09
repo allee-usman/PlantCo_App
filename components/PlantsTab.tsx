@@ -13,7 +13,7 @@ export const PlantsTab = ({ scrollY }: any) => {
 			)}
 			contentContainerStyle={{
 				paddingTop: CONTENT_TOP_PADDING,
-				paddingBottom: 100,
+				paddingBottom: 70,
 			}}
 			showsVerticalScrollIndicator={false}
 			scrollEventThrottle={16}
