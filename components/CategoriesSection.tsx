@@ -38,7 +38,7 @@ const CategoriesSection: React.FC<ServiceCategoriesProps> = ({
 		<View>
 			{/* Header */}
 
-			<View className="px-4 mb-4">
+			<View className="px-4 mb-2">
 				<SectionHeader
 					label="Quick Categories"
 					rightButton
@@ -62,6 +62,8 @@ const CategoriesSection: React.FC<ServiceCategoriesProps> = ({
 						icon={item.image?.url || ''}
 						iconType="image"
 						onPress={() => handleCategoryPress(item)}
+						variant="pill"
+						bgColor="#fff"
 					/>
 				)}
 			/>

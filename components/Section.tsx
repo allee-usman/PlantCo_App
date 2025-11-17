@@ -4,6 +4,7 @@ import SectionHeader from './SectionHeader';
 
 interface SectionProps {
 	title?: string;
+	subtitle?: string;
 	containerStyle?: ViewStyle;
 	children: React.ReactNode;
 	headerAction?: boolean;
@@ -13,6 +14,7 @@ interface SectionProps {
 
 const Section: React.FC<SectionProps> = ({
 	title,
+	subtitle,
 	children,
 	containerStyle,
 	headerAction,
@@ -25,6 +27,7 @@ const Section: React.FC<SectionProps> = ({
 				<View style={{ paddingHorizontal: 16 }}>
 					<SectionHeader
 						label={title}
+						subtitle={subtitle}
 						rightButton={headerAction}
 						rightBtnLabel={headerActionLabel}
 						onPress={onHeaderAction}

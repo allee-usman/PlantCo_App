@@ -177,6 +177,7 @@ export interface SectionConfig {
 export interface Section {
 	id: string;
 	title: string;
+	subtitle?: string;
 	filters?: Record<string, any>;
 	config?: SectionConfig;
 }

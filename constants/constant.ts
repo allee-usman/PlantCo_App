@@ -190,8 +190,9 @@ export const SERVICE_SECTIONS: Section[] = [
 	},
 
 	{
-		id: 'top-deals',
-		title: 'Top Deals',
+		id: 'top-rated',
+		title: 'Top Rated Gardner',
+		subtitle: 'Best gardner in your area',
 		config: {
 			layout: 'horizontal', // 👈 Horizontal scroll
 			// backgroundColor: '#E8F5E9',

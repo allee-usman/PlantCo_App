@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import CategoriesSection from './CategoriesSection';
 import ProductCard from './ProductCard';
-type SectionType = { id: string; title: string };
+type SectionType = { id: string; title: string; subtitle?: string };
 type SectionRendererProps = { section: SectionType; activeTab: string };
 
 export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
@@ -31,7 +31,7 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 	const [products, setProducts] = useState<IBaseProduct[]>([]);
 	const [loading, setLoading] = useState(false);
 	const { user } = useAppSelector((state: RootState) => state.auth);
-	const wishlistIds = user?.wishlist ?? [];
+	const wishlistIds = user?.customerProfile?.wishlist ?? [];
 
 	// Get config + filters
 	const sectionObj = PLANT_SECTIONS.find((s) => s.id === section.id);
@@ -225,6 +225,7 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 		<Section
 			key={section.id}
 			title={section.title}
+			subtitle={section.subtitle}
 			containerStyle={containerStyle}
 			headerAction
 			headerActionLabel="See All"
@@ -263,6 +264,28 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 					renderItem={renderProductItem}
 				/>
 			)}
+
+			{/* <ServiceCard
+				image="https://res.cloudinary.com/dguvpd38e/image/upload/v1760158108/avatars/file.jpg"
+				name="Mr. Ahmed Ali"
+				// bio="Professional gardener specializing in lawn care and plant maintenance"
+				price={500}
+				rating={4.8}
+				reviewCount={156}
+				specialities={['Lawn Care', 'Pruning', 'Fertilizing', 'Pest Control']}
+				status="available"
+				experience="5+ years"
+				location="Pattoki, Punjab"
+				completedJobs={150}
+				responseTime="Within 2 hours"
+				verified={true}
+				discount={15}
+				isFavorite={false}
+				onPress={() => {}}
+				onBookPress={() => {}}
+				onFavoriteToggle={() => {}}
+				fullWidth
+			/> */}
 		</Section>
 	);
 };

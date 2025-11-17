@@ -1,5 +1,6 @@
 import legal from '@/assets/icons/agreement.png';
 import apple from '@/assets/icons/apple.png';
+import verifiedBadge from '@/assets/icons/approve.png';
 import arrowDown from '@/assets/icons/arrow-down.png';
 import bagOutline from '@/assets/icons/bag-outline.png';
 import bag from '@/assets/icons/bag.png';
@@ -22,6 +23,7 @@ import compassOutline from '@/assets/icons/compass-outline.png';
 import compass from '@/assets/icons/compass.png';
 import card from '@/assets/icons/credit-card.png';
 import cross from '@/assets/icons/cross.png';
+import discount from '@/assets/icons/discount.png';
 import dollar from '@/assets/icons/dollar.png';
 import edit from '@/assets/icons/edit.png';
 import email from '@/assets/icons/email.png';
@@ -63,6 +65,8 @@ import password from '@/assets/icons/password.png';
 import person from '@/assets/icons/person.png';
 import promoCode from '@/assets/icons/promo-code.png';
 import faqs from '@/assets/icons/question.png';
+import reputation from '@/assets/icons/reputation.png';
+import rupee from '@/assets/icons/rupee.png';
 import sameDayDelivery from '@/assets/icons/same-day-delivery.png';
 import scan from '@/assets/icons/scan.png';
 import schoolLocation from '@/assets/icons/school-location.png';
@@ -71,6 +75,7 @@ import settingSlider from '@/assets/icons/setting-slider.png';
 import standardDelivery from '@/assets/icons/standard-delivery.png';
 import star from '@/assets/icons/star.png';
 import stripe from '@/assets/icons/stripe.png';
+import suitcase from '@/assets/icons/suitcase.png';
 import target from '@/assets/icons/target.png';
 import thankyou from '@/assets/icons/thankyou.png';
 import to from '@/assets/icons/to.png';
@@ -85,6 +90,10 @@ import wishlist from '@/assets/icons/wishlist.png';
 
 export const icons = {
 	thankyou,
+	rupee,
+	reputation,
+	discount,
+	suitcase,
 	checklistOutline,
 	checklist,
 	camera,
@@ -120,6 +129,7 @@ export const icons = {
 	arrowDown,
 	chat,
 	settingSlider,
+	verifiedBadge,
 	filter,
 	message,
 	notification,
