@@ -2,14 +2,13 @@
 // import { icons } from '@/constants/icons';
 import { COLORS } from '@/constants/colors';
 import { icons } from '@/constants/icons';
-import { images } from '@/constants/images';
-import { BookingDetails } from '@/interfaces/interface';
+import { IBooking } from '@/types/booking.types';
 import { formatDateTime, getFinishTime } from '@/utils/formatDate';
 import React from 'react';
 import { Image, Text, View } from 'react-native';
 
 interface BookingInfoCardProps {
-	booking: BookingDetails;
+	booking: IBooking;
 }
 
 const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
@@ -17,7 +16,11 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 		switch (booking.status) {
 			case 'completed':
 				return 'text-green-600 dark:text-green-600';
-			case 'upcoming':
+			case 'pending':
+				return 'text-orange-400 dark:text-orange-300';
+			case 'in_progress':
+				return 'text-orange-400 dark:text-orange-300';
+			case 'rejected':
 				return 'text-orange-400 dark:text-orange-300';
 			case 'cancelled':
 				return 'text-red-600 dark:text-red-400';
@@ -26,7 +29,10 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 		}
 	};
 
-	const finishTime = getFinishTime(booking.startTime, booking.duration);
+	const finishTime = getFinishTime(
+		booking.scheduledTime as string,
+		booking.duration
+	);
 
 	return (
 		<View className="bg-light-surface dark:bg-gray-800 rounded-xl p-4 mx-4 mb-4 ">
@@ -34,12 +40,10 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 			<View className="flex-row h-[80px] items-center justify-between mb-4">
 				<View className="flex-row items-center gap-x-3">
 					{/* Service Image */}
-					<View className="w-[80px] h-[80px] rounded-xl">
+					<View className="w-[80px] h-[80px] rounded-xl bg-gray-300 dark:bg-gray-800">
 						<Image
 							source={
-								booking.serviceImage
-									? { uri: booking.serviceImage }
-									: images.servicePlaceholder
+								booking.service.image && { uri: booking.service.image.url }
 							}
 							className="w-full h-full rounded-lg overflow-hidden"
 							resizeMode="cover"
@@ -49,16 +53,17 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 					<View className="justify-between p-1 h-full">
 						{/* Service Name */}
 						<Text className="text-body font-nexa-extrabold text-gray-900 dark:text-white">
-							{booking.serviceName}
+							{booking.service.title}
 						</Text>
 						{/* Booking ID */}
 
 						<Text className="text-gray-600 dark:text-gray-400 font-nexa-bold text-body-xs">
-							Booking ID: <Text className="font-nexa">{booking.bookingId}</Text>
+							Booking ID:{' '}
+							<Text className="font-nexa">{booking.bookingNumber}</Text>
 						</Text>
 						{/* Service Rate */}
 						<Text className="font-nexa-extrabold text-gray-950 dark:text-white text-body-sm">
-							Rs. {booking.serviceProvider.ratePerHour}/hr
+							Rs. {booking.service.hourlyRate}/hr
 						</Text>
 					</View>
 				</View>
@@ -72,7 +77,7 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 						Started At
 					</Text>
 					<Text className="font-nexa-bold text-body-xs text-gray-950 dark:text-white">
-						{formatDateTime(booking.startTime)}
+						{formatDateTime(booking.scheduledTime as string)}
 					</Text>
 				</View>
 				{/* finish time */}

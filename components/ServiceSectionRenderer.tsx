@@ -1,19 +1,27 @@
+// components/ServiceSectionRenderer.tsx
 import PromotionalBannerSwiper from '@/components/PromotionalBanner';
 import Section from '@/components/Section';
-import SponsoredProductsCard from '@/components/SponsoredProductsCard';
 import { COLORS } from '@/constants/colors';
-import { PLANT_SECTIONS } from '@/constants/constant';
+import { SERVICE_SECTIONS } from '@/constants/constant';
+import { useCardDimensions } from '@/hooks/useCardDimensions';
 import { Category } from '@/interfaces/category.interface';
+import { User } from '@/interfaces/interface';
 import { useAppSelector } from '@/redux/hooks';
 import { RootState } from '@/redux/store';
 import { getParentCategories } from '@/services/category.services';
-import { listProducts } from '@/services/product.services';
-import { IBaseProduct } from '@/types/product.types';
+import {
+	getAllServiceProviders,
+	ListProvidersQuery,
+} from '@/services/provider.services';
+import { serviceProviderService } from '@/services/sm.services';
+import { Service } from '@/types/service.types';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import CategoriesSection from './CategoriesSection';
-import ProductCard from './ProductCard';
+import ServiceCard from './ServiceCard';
+import ListingCard from './ServiceListingCard';
+
 type SectionType = { id: string; title: string; subtitle?: string };
 type SectionRendererProps = { section: SectionType; activeTab: string };
 
@@ -21,51 +29,106 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 	section,
 	activeTab,
 }) => {
-	// State for remote service categories (replace hardcoded array)
 	const [remoteCategories, setRemoteCategories] = useState<Category[] | null>(
 		null
 	);
 	const [catsLoading, setCatsLoading] = useState(false);
 	const [catsError, setCatsError] = useState<string | null>(null);
 
-	const [products, setProducts] = useState<IBaseProduct[]>([]);
+	// NEW: Separate state for providers and services
+	const [providers, setProviders] = useState<User[]>([]);
+	const [services, setServices] = useState<Service[]>([]);
 	const [loading, setLoading] = useState(false);
-	const { user } = useAppSelector((state: RootState) => state.auth);
-	const wishlistIds = user?.customerProfile?.wishlist ?? [];
 
-	// Get config + filters
-	const sectionObj = PLANT_SECTIONS.find((s) => s.id === section.id);
+	const { cardWidth, cardHeight } = useCardDimensions({
+		cardType: 'service',
+		fullWidth: true,
+	});
+
+	// Get favorites from Redux instead of user profile
+	const favoriteProviderIds = useAppSelector(
+		(state: RootState) => state.favorites?.favoriteProviderIds ?? []
+	);
+
+	// FIXED: Find section configuration from SERVICE_SECTIONS
+	const sectionObj = SERVICE_SECTIONS.find((s) => s.id === section.id);
 	const config = sectionObj?.config || {};
+	// NEW: Get mode from section config (provider or service)
+	const mode = sectionObj?.mode || 'provider'; // Default to 'provider' if not specified
 
+	// NEW: Fetch data based on section mode (provider or service)
 	useEffect(() => {
-		// skip special sections
+		// FIXED: Skip data fetching for special sections that don't need providers/services
 		if (section.id === 'promo-banner' || section.id === 'quick-categories')
 			return;
 
 		let mounted = true;
-		const fetchProducts = async () => {
-			setLoading(true);
+
+		const loadData = async () => {
+			if (!sectionObj) return;
+			const filters = sectionObj?.filters || {};
+
 			try {
-				// compute sectionObj locally to avoid stale refs
-				const sectionObjLocal = PLANT_SECTIONS.find((s) => s.id === section.id);
-				const params: Record<string, any> = {
-					...(sectionObjLocal?.filters || {}),
-				};
+				setLoading(true);
 
-				if (Array.isArray(params.tags)) params.tags = params.tags.join(',');
-				if (Array.isArray(params.categories))
-					params.categories = params.categories.join(',');
+				// NEW: Check mode and fetch accordingly
+				if (mode === 'provider') {
+					// FETCH PROVIDERS: Build query params from section filters
+					const query: ListProvidersQuery = {
+						limit: filters.limit || 8,
+						...(filters.serviceTypes && { serviceTypes: filters.serviceTypes }),
+						...(filters.specializations && {
+							specializations: filters.specializations,
+						}),
+						...(filters.minRating && { minRating: filters.minRating }),
+						...(filters.minExperience && {
+							minExperience: filters.minExperience,
+						}),
+						...(filters.status && { status: filters.status }),
+						...(filters.maxHourlyRate && {
+							maxHourlyRate: filters.maxHourlyRate,
+						}),
+						// NEW: Handle sort parameter from filters
+						...(filters.sort && {
+							sortBy: filters.sort.split(':')[0],
+							sortOrder: filters.sort.split(':')[1] as 'asc' | 'desc',
+						}),
+						...(filters.verified !== undefined && {
+							verified: filters.verified,
+						}),
+						// NEW: Location-based filtering flag
+						...(filters.locationBased && {
+							locationBased: filters.locationBased,
+						}),
+					};
 
-				const resp = await listProducts(params);
-				// defensive: ensure resp.products exists
-				const fetchedProducts = Array.isArray(resp?.products)
-					? resp.products
-					: [];
-				if (!mounted) return;
-				setProducts(fetchedProducts);
+					const resp = await getAllServiceProviders(query);
+					const fetchedProviders = Array.isArray(resp) ? resp : [];
+
+					if (!mounted) return;
+					setProviders(fetchedProviders);
+					setServices([]); // Clear services when fetching providers
+				} else if (mode === 'service') {
+					const resp = await serviceProviderService.listServices({
+						serviceType: filters.serviceTypes,
+						// minRating: 4,
+						// page: 1,
+						// provider: filters.provider,
+						limit: filters.limit || 4,
+						active: true,
+					});
+
+					// console.log('API response data: ', resp.data);
+
+					const fetchedServices = Array.isArray(resp.data) ? resp.data : [];
+
+					if (!mounted) return;
+					setServices(fetchedServices);
+					setProviders([]); // Clear providers when fetching services
+				}
 			} catch (err) {
 				console.error(
-					`Failed to fetch products for section ${section.id}:`,
+					`Failed to fetch ${mode}s for section ${section.id}:`,
 					err
 				);
 			} finally {
@@ -73,28 +136,24 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 			}
 		};
 
-		fetchProducts();
-
+		loadData();
 		return () => {
 			mounted = false;
 		};
-	}, [section.id, activeTab]);
+	}, [section.id, activeTab, mode, sectionObj]);
 
+	// Fetch categories for quick-categories section
 	useEffect(() => {
-		// Only fetch once or when activeTab changes if you prefer
 		let mounted = true;
 		const fetchCategories = async () => {
-			if (section.id !== 'quick-categories') return; // only for that section
+			// FIXED: Only fetch categories for quick-categories section
+			if (section.id !== 'quick-categories') return;
+
 			setCatsLoading(true);
 			setCatsError(null);
 			try {
-				// getParentCategories accepts optional type -> use 'service'
-
 				const cats = await getParentCategories('service');
-				// console.log('getParentCategories raw response:', cats);
-
 				if (!mounted) return;
-
 				setRemoteCategories(cats);
 			} catch (err) {
 				console.error('Failed to fetch categories', err);
@@ -110,72 +169,124 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 		};
 	}, [section.id, activeTab]);
 
+	// NEW: Handler for "View All" categories
 	const handleViewAll = () => {
 		console.log('View all categories');
 		// router.push('/services/categories');
-		//TODO: navigate to all categories screen
 	};
 
+	// NEW: Handler for category press
 	const handleCategoryPress = (category: Category) => {
-		// navigate to the category screen; pass id and name (optional)
 		router.push({
 			pathname: '/(root)/home/category/[id]',
 			params: { id: category._id ?? category._id, name: category.name },
 		});
 	};
 
-	// Render product item
-	const renderProductItem = useCallback(
-		({ item }: { item: IBaseProduct }) => {
-			if (section.id === 'sponsored') {
-				return (
-					<SponsoredProductsCard
-						key={item._id}
-						product={{
-							id: item._id,
-							title: item.name,
-							punchLine: item.shortDescription || item.description,
-							image: item.images?.[0]?.url,
-						}}
-					/>
-				);
+	// NEW: Handler for provider card press
+	const handleProviderPress = useCallback((providerId: string) => {
+		router.push({
+			pathname: '/(root)/plant-care/profile/[providerId]',
+			params: {
+				providerId: providerId,
+			},
+		});
+	}, []);
+
+	// NEW: Handler for service card press
+	const handleServicePress = useCallback((serviceId: string) => {
+		router.push({
+			pathname: '/(root)/plant-care/service/[serviceId]',
+			params: {
+				serviceId: serviceId,
+			},
+		});
+	}, []);
+
+	// NEW: Handler for book button press
+	const handleBookPress = useCallback(
+		(id: string) => {
+			if (mode === 'provider') {
+				router.push({
+					pathname: '/(root)/plant-care/profile/[providerId]',
+					params: {
+						providerId: id,
+					},
+				});
+			} else {
+				router.push({
+					pathname: '/(root)/plant-care/service/[serviceId]',
+					params: {
+						serviceId: id,
+					},
+				});
 			}
+		},
+		[mode]
+	);
+
+	// NEW: Render individual provider card item
+	const renderProviderItem = useCallback(
+		({ item }: { item: User }) => {
+			const isFavorite = favoriteProviderIds.includes(item._id);
 
 			return (
-				<ProductCard
-					product={{
-						id: item._id,
-						name: item.name,
-						price: item.price,
-						compareAtPrice: item.compareAtPrice,
-						image: item.images?.[0]?.url,
-						rating: item.reviewStats?.averageRating,
-						reviewCount: item.reviewStats?.totalReviews,
-						description: item.description,
-						isWishlisted: wishlistIds.includes(item._id),
-					}}
-					onPress={() =>
-						router.push({
-							pathname: '/(root)/home/product/[id]',
-							params: {
-								id: item._id,
-								product: JSON.stringify(item),
-							},
-						})
+				<ServiceCard
+					image={item.avatar?.url!}
+					name={item.serviceProviderProfile?.businessName!}
+					price={item.serviceProviderProfile?.pricing?.hourlyRate!}
+					rating={item.serviceProviderProfile?.stats?.averageRating!}
+					reviewCount={item.serviceProviderProfile?.stats?.totalReviews!}
+					specialities={
+						item.serviceProviderProfile?.experience?.specializations || []
 					}
-					// onPress={() =>
-					// 	router.push({
-					// 		pathname: '/(root)/home/product/[id]',
-					// 		params: { id: item._id },
-					// 	})
-					// } //TODO: pass product id only
+					status={item.serviceProviderProfile?.availability?.status!}
+					experience={
+						item.serviceProviderProfile?.experience?.yearsInBusiness
+							? `${item.serviceProviderProfile.experience.yearsInBusiness}+ years`
+							: undefined
+					}
+					location="Johar Town F-Block"
+					completedJobs={item.serviceProviderProfile?.stats?.completedJobs}
+					responseTime={item.serviceProviderProfile?.stats?.responseTime?.toString()}
+					verified={
+						item.serviceProviderProfile?.verificationStatus === 'verified'
+					}
+					width={cardWidth}
+					height={cardHeight}
+					isFavorite={isFavorite}
+					onPress={() => handleProviderPress(item._id)}
+					onBookPress={() => handleBookPress(item._id)}
 				/>
 			);
 		},
-		[wishlistIds, section.id]
+		[
+			favoriteProviderIds,
+			cardWidth,
+			cardHeight,
+			handleProviderPress,
+			handleBookPress,
+		]
 	);
 
-	// Handle special sections - Promotional Banner
+	// NEW: Render individual service card item
+	const renderServiceItem = useCallback(
+		({ item }: { item: any }) => {
+			// TODO: Add proper Service interface and mapping
+			return (
+				<View className="px-4">
+					<ListingCard
+						listing={item}
+						onPress={() => handleServicePress(item._id)}
+						// onBookPress={() => handleBookPress(item._id)}
+					/>
+				</View>
+			);
+		},
+		[handleServicePress]
+	);
+
+	// SECTION RENDER: Promotional Banner
 	if (sectionObj?.config?.layout === 'banner') {
 		return (
 			<View key={section.id} className="px-4 mb-8">
@@ -184,22 +295,15 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 		);
 	}
 
-	// Handle special sections - Service Categories
+	// SECTION RENDER: Service Categories (quick-categories)
 	if (section.id === 'quick-categories') {
-		const categoriesToShow = remoteCategories ?? []; // fallback to empty array
-		// console.log(
-		// 	'remoteCategories passed to CategoriesSection:',
-		// 	remoteCategories
-		// );
+		const categoriesToShow = remoteCategories ?? [];
 		return (
 			<View key={section.id} className="mb-6">
 				{catsLoading ? (
 					<ActivityIndicator size="small" color={COLORS.primary} />
 				) : catsError ? (
-					<Section /* reuse your Section component or simple view */
-						title="Categories"
-						containerStyle={{ marginHorizontal: 16 }}
-					>
+					<Section title="Categories" containerStyle={{ marginHorizontal: 16 }}>
 						<View style={{ padding: 12 }}>
 							<Text>{catsError}</Text>
 						</View>
@@ -215,11 +319,17 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 		);
 	}
 
-	// --- Product Sections ---
+	// SECTION RENDER: Provider/Service sections (horizontal/grid layouts)
+	// NEW: Apply container styling from section config
 	const containerStyle = {
-		backgroundColor: config.backgroundColor || 'transparent',
 		borderRadius: config.borderRadius || 0,
+		backgroundColor: config.backgroundColor || 'transparent',
 	};
+
+	// NEW: Determine which data to render based on mode
+	const dataToRender = mode === 'provider' ? providers : services;
+	const renderItem =
+		mode === 'provider' ? renderProviderItem : renderServiceItem;
 
 	return (
 		<Section
@@ -233,59 +343,35 @@ export const ServiceSectionRenderer: React.FC<SectionRendererProps> = ({
 			{loading ? (
 				<ActivityIndicator size="small" color={COLORS.primary} />
 			) : config.layout === 'grid' ? (
+				// LAYOUT: Grid layout for provider/service cards
 				<FlatList
-					data={products}
+					data={dataToRender}
 					numColumns={config.numColumns || 2}
-					columnWrapperStyle={{
+					keyExtractor={(item) => item._id}
+					contentContainerStyle={{
+						paddingBottom: 8,
 						paddingHorizontal: 16,
 						marginTop: 12,
 						gap: 12,
 					}}
-					keyExtractor={(item) => item._id}
-					contentContainerStyle={{
-						paddingBottom: 8,
-					}}
-					renderItem={renderProductItem}
+					renderItem={renderItem}
 					scrollEnabled={false}
 				/>
 			) : (
+				// LAYOUT: Horizontal scroll layout for provider/service cards
 				<FlatList
-					data={products}
+					data={dataToRender}
 					horizontal
 					showsHorizontalScrollIndicator={false}
 					keyExtractor={(item) => item._id}
 					contentContainerStyle={{
 						gap: 12,
-						paddingVertical: 12,
-						marginTop: 4,
 						paddingHorizontal: 16,
 						alignItems: 'flex-start',
 					}}
-					renderItem={renderProductItem}
+					renderItem={renderItem}
 				/>
 			)}
-
-			{/* <ServiceCard
-				image="https://res.cloudinary.com/dguvpd38e/image/upload/v1760158108/avatars/file.jpg"
-				name="Mr. Ahmed Ali"
-				// bio="Professional gardener specializing in lawn care and plant maintenance"
-				price={500}
-				rating={4.8}
-				reviewCount={156}
-				specialities={['Lawn Care', 'Pruning', 'Fertilizing', 'Pest Control']}
-				status="available"
-				experience="5+ years"
-				location="Pattoki, Punjab"
-				completedJobs={150}
-				responseTime="Within 2 hours"
-				verified={true}
-				discount={15}
-				isFavorite={false}
-				onPress={() => {}}
-				onBookPress={() => {}}
-				onFavoriteToggle={() => {}}
-				fullWidth
-			/> */}
 		</Section>
 	);
 };

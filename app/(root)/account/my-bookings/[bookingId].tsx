@@ -1,9 +1,13 @@
 import BookingInfoCard from '@/components/BookingInfoCard';
 import BookingPaymentSummaryCard from '@/components/BookingPaymentSummaryCard';
+import CustomHeader from '@/components/CustomHeader';
+import ErrorScreen from '@/components/ErrorScreen';
+import LoadingScreen from '@/components/LoadingScreen';
 import ServiceProviderCard from '@/components/ServiceProviderCard';
-import { bookingData } from '@/constants/mockData';
-import { BookingDetails } from '@/interfaces/interface';
+import { bookingService } from '@/services/booking.services';
+import { IBooking } from '@/types/booking.types';
 import { generateBookingReceipt } from '@/utils/generateRecipet';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
@@ -18,44 +22,72 @@ import {
 } from 'react-native';
 
 const BookingDetailsScreen: React.FC = () => {
-	const { id } = useLocalSearchParams<{ id?: string }>();
-	const mockID = id ? parseInt(id, 10) : 1;
-	const [booking, setBooking] = useState<BookingDetails | null>(null);
+	const { bookingId } = useLocalSearchParams<{ bookingId?: string }>();
+	const [booking, setBooking] = useState<IBooking | null>(null);
 	const [loading, setLoading] = useState(true);
 	const { colorScheme } = useColorScheme();
 	const isDark = colorScheme === 'dark';
 
-	// Mock data - In real app, fetch from API using the id
 	useEffect(() => {
-		const fetchBookingDetails = () => {
-			// Simulate API call
-			setTimeout(() => {
-				const mockBookingDetails =
-					bookingData.find((b) => b.id === mockID) || null;
-				setBooking(mockBookingDetails);
+		if (!bookingId) return;
+
+		const fetchBookingDetails = async () => {
+			setLoading(true);
+			try {
+				const res = await bookingService.getBookingById(bookingId);
+				console.log('API response: ', res.data);
+
+				setBooking(res.data);
+			} catch (err: unknown) {
+				const message =
+					err instanceof Error ? err.message : 'Something went wrong';
+				alert(message);
+			} finally {
 				setLoading(false);
-			}, 1000);
+			}
 		};
 
 		fetchBookingDetails();
-	}, [mockID]);
+	}, [bookingId]);
 
 	const handleCancelBooking = () => {
-		Alert.alert(
+		Alert.prompt(
 			'Cancel Booking',
-			'Are you sure you want to cancel this booking?',
+			'Please enter the reason for cancellation (min 10 characters)',
 			[
-				{ text: 'No', style: 'cancel' },
+				{ text: 'Cancel', style: 'cancel' },
 				{
-					text: 'Yes',
-					style: 'destructive',
-					onPress: () => {
-						// Handle cancel logic
-						console.log('Booking canceled');
-						router.back();
+					text: 'Submit',
+					onPress: async (reason) => {
+						if (!reason || reason.trim().length < 10) {
+							alert('Reason must be at least 10 characters long.');
+							return;
+						}
+
+						try {
+							const res = await bookingService.cancelBooking(
+								bookingId!,
+								reason
+							);
+							console.log('Booking cancelled:', res.data);
+							setBooking((prev) =>
+								prev
+									? {
+											...prev,
+											status: 'cancelled',
+											cancellation: res.data.cancellation,
+									  }
+									: prev
+							);
+						} catch (err: unknown) {
+							const message =
+								err instanceof Error ? err.message : 'Something went wrong';
+							alert(message);
+						}
 					},
 				},
-			]
+			],
+			'plain-text'
 		);
 	};
 
@@ -66,28 +98,35 @@ const BookingDetailsScreen: React.FC = () => {
 
 	if (loading) {
 		return (
-			<SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900">
-				<View className="flex-1 items-center justify-center">
-					<Text className="text-gray-600 dark:text-gray-400">Loading...</Text>
-				</View>
-			</SafeAreaView>
+			<LoadingScreen
+				headerTitle="Booking Details"
+				description="Loading booking details..."
+			/>
 		);
 	}
 
 	if (!booking) {
 		return (
-			<SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900">
-				<View className="flex-1 items-center justify-center">
-					<Text className="text-gray-600 dark:text-gray-400">
-						Booking not found
-					</Text>
-				</View>
-			</SafeAreaView>
+			<ErrorScreen
+				error="No such booking found!"
+				headerTitle="Booking Details"
+			/>
 		);
 	}
 
 	return (
 		<SafeAreaView className="flex-1 bg-light-screen dark:bg-gray-950">
+			<CustomHeader
+				title="Booking Details"
+				iconLeft={
+					<Ionicons
+						name="chevron-back-outline"
+						size={24}
+						color={isDark ? 'white' : 'black'}
+					/>
+				}
+				onIconLeftPress={() => router.back()}
+			/>
 			<StatusBar
 				backgroundColor="transparent"
 				barStyle={isDark ? 'light-content' : 'dark-content'}
@@ -100,23 +139,38 @@ const BookingDetailsScreen: React.FC = () => {
 					</Text>
 
 					<BookingInfoCard booking={booking} />
-					<ServiceProviderCard provider={booking.serviceProvider} />
+					<View className="mx-4">
+						<ServiceProviderCard provider={booking.provider} />
+					</View>
 					{/* <PaymentSummaryCard data={{}}/> */}
 					<BookingPaymentSummaryCard
-						ratePerHour={booking.serviceProvider.ratePerHour}
+						ratePerHour={booking?.service?.hourlyRate}
 						duration={booking.duration}
-						tip={booking?.tip ?? 0}
-						discount={booking?.discount ?? 0}
-						taxes={booking?.taxes ?? 0}
-						paymentMethod={booking.paymentMethod.type}
-						status={booking.serviceDetails.paymentStatus}
+						// tip={booking?.tip ?? 0}
+						discount={0}
+						// taxes={booking?.taxes ?? 0}
+						paymentMethod={'cash'}
+						status={booking.status === 'completed'}
 					/>
 					{/* <ServiceDetailsCard details={booking.serviceDetails} /> */}
 				</View>
+				{booking.status === 'cancelled' && booking.cancellation && (
+					<View className="px-4 py-2 bg-red-50 dark:bg-red-900 rounded-lg mb-3">
+						<Text className="text-red-600 dark:text-red-200 font-nexa-bold">
+							Cancelled: {booking.cancellation.reason}
+						</Text>
+						<Text className="text-gray-500 dark:text-gray-400 text-sm">
+							By: {booking.cancellation.cancelledBy}, At:{' '}
+							{new Date(
+								booking.cancellation.cancelledAt as string
+							).toLocaleString()}
+						</Text>
+					</View>
+				)}
 			</ScrollView>
 
 			{/* Action buttons for upcoming bookings */}
-			{booking.status === 'upcoming' && (
+			{(booking.status === 'pending' || booking.status === 'confirmed') && (
 				<View className="px-4 pb-5 pt-3 bg-light-screen dark:bg-gray-950">
 					<View className="flex-row gap-x-3">
 						<TouchableOpacity

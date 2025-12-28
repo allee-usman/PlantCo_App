@@ -2,11 +2,14 @@
 
 import { Address } from '../types';
 
+// Common types
 export type ID = string;
 
 export type UserRole = 'customer' | 'admin' | 'vendor' | 'service_provider';
 export type UserStatus = 'active' | 'disabled' | 'suspended';
+
 export type BusinessType = 'nursery' | 'grower' | 'retailer';
+
 export type Specialty =
 	| 'houseplants'
 	| 'outdoor_plants'
@@ -16,6 +19,7 @@ export type Specialty =
 	| 'pots'
 	| 'tools'
 	| 'fertilizers';
+
 export type ServiceType =
 	| 'landscaping'
 	| 'lawn_mowing'
@@ -27,6 +31,7 @@ export type ServiceType =
 	| 'seasonal_cleanup'
 	| 'plant_care'
 	| 'consultation';
+
 export type WeekDay =
 	| 'monday'
 	| 'tuesday'
@@ -36,13 +41,13 @@ export type WeekDay =
 	| 'saturday'
 	| 'sunday';
 
-/** Avatar object */
+/* ---------------------- Avatar ---------------------- */
 export interface Avatar {
 	url?: string;
 	public_id?: string | null;
 }
 
-/** Notification settings */
+/* ---------------------- Notification settings ---------------------- */
 export interface NotificationSettings {
 	enableNotifications?: boolean;
 	emailAlerts?: boolean;
@@ -51,21 +56,19 @@ export interface NotificationSettings {
 	serviceAlerts?: boolean;
 }
 
-/** Recently viewed item inside customerProfile */
+/* ---------------------- Customer Profile ---------------------- */
 export interface RecentlyViewedItem {
 	productId: ID;
 	viewedAt?: string | Date;
 }
 
-/** Customer-specific profile */
 export interface CustomerProfile {
-	name?: string;
 	addresses?: Address[];
-	wishlist?: ID[]; // product ids
+	wishlist?: ID[];
 	recentlyViewed?: RecentlyViewedItem[];
 }
 
-/** Vendor profile nested types */
+/* ---------------------- Vendor Profile ---------------------- */
 export interface VendorStats {
 	totalProducts?: number;
 	totalSales?: number;
@@ -86,7 +89,6 @@ export interface SocialAccounts {
 	tiktok?: string;
 }
 
-/** Vendor-specific profile */
 export interface VendorProfile {
 	businessName?: string;
 	businessType?: BusinessType;
@@ -98,56 +100,45 @@ export interface VendorProfile {
 	shipping?: VendorShipping;
 }
 
-/** Service provider nested types */
+/* ---------------------- Service Provider Profile ---------------------- */
+
+// businessLocation.geo
+export interface GeoLocation {
+	type?: 'Point';
+	coordinates?: number[]; // [lng, lat]
+}
+
+export interface ServiceProviderBusinessLocation {
+	address?: Address;
+	location?: GeoLocation;
+}
+
 export interface ServiceArea {
-	radius?: number; // miles
-	zipCodes?: string[];
+	radius?: number;
+	unit?: 'km' | 'miles';
 	cities?: string[];
 	states?: string[];
 }
 
 export interface Pricing {
 	hourlyRate?: number;
-	minimumCharge?: number;
 	travelFee?: number;
 }
 
 export interface WorkingHours {
-	start?: string; // "08:00"
-	end?: string; // "18:00"
-}
-
-export interface SeasonalAvailability {
-	spring?: boolean;
-	summer?: boolean;
-	fall?: boolean;
-	winter?: boolean;
+	start?: string;
+	end?: string;
 }
 
 export interface ServiceAvailability {
+	status?: 'available' | 'on_leave' | 'busy';
 	workingDays?: WeekDay[];
 	workingHours?: WorkingHours;
-	seasonalAvailability?: SeasonalAvailability;
-}
-
-export interface Certification {
-	name?: string;
-	issuedBy?: string;
-	issuedDate?: string | Date;
-	expiresAt?: string | Date;
 }
 
 export interface Experience {
 	yearsInBusiness?: number;
-	certifications?: Certification[];
-	specializations?: string[];
-}
-
-export interface EquipmentItem {
-	type?: string;
-	brand?: string;
-	model?: string;
-	year?: number;
+	specializations?: ServiceType[];
 }
 
 export interface ServiceStats {
@@ -155,55 +146,65 @@ export interface ServiceStats {
 	completedJobs?: number;
 	averageRating?: number;
 	totalReviews?: number;
-	responseTime?: number; // avg hours
-	completionRate?: number; // percent
+	responseTime?: number;
+	completionRate?: number;
 }
 
 export interface PortfolioItem {
 	title?: string;
 	description?: string;
-	images?: string[]; // urls
-	serviceType?: ServiceType | string;
+	images?: string[];
+	serviceType?: ServiceType;
 	completedDate?: string | Date;
 }
 
-/** Service provider-specific profile */
 export interface ServiceProviderProfile {
 	businessName?: string;
+	bio?: string;
+	businessLocation?: ServiceProviderBusinessLocation;
 	serviceTypes?: ServiceType[];
+	verificationStatus?: 'pending' | 'verified' | 'rejected';
 	serviceArea?: ServiceArea;
-	businessLocation?: Address;
 	pricing?: Pricing;
 	availability?: ServiceAvailability;
+	paymentDetails?: {
+		stripeAccountId?: string;
+		payeeName?: string;
+	};
 	experience?: Experience;
-	equipment?: EquipmentItem[];
 	stats?: ServiceStats;
 	portfolio?: PortfolioItem[];
 }
 
-/** Main User interface returned to frontend */
+/* ---------------------- Main User Interface ---------------------- */
 export interface User {
 	_id: ID;
+
 	username: string;
 	email: string;
 	phoneNumber?: string | null;
-	// passwordHash intentionally omitted from frontend interface
+	name?: string;
 
 	role: UserRole;
 	status?: UserStatus;
+
 	avatar?: Avatar;
 	isVerified?: boolean;
 
 	notificationSettings?: NotificationSettings;
 
+	profileCompletion?: {
+		isComplete?: boolean;
+		percentage?: number;
+		completedAt?: string | Date;
+	};
+
 	customerProfile?: CustomerProfile;
 	vendorProfile?: VendorProfile;
 	serviceProviderProfile?: ServiceProviderProfile;
 
-	// timestamps
 	createdAt?: string | Date;
 	updatedAt?: string | Date;
 
-	// Virtual: convenience businessName (may be provided by backend)
-	businessName?: string | null;
+	businessName?: string | null; // provided by backend
 }

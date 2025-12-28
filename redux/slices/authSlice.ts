@@ -221,7 +221,7 @@ export const loadUserFromStorage = createAsyncThunk<
 		// 	return { token, user: res.data.user, otpExpiresAt: null, pendingEmail };
 
 		setAuthToken(token);
-		const res = await axios.get(`${BASE_URI}/users/profile`);
+		const res = await axios.get(`${BASE_URI}/users/me`);
 
 		const user = res.data.user ?? null;
 

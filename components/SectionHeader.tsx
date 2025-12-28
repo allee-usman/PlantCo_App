@@ -14,12 +14,12 @@ const SectionHeader = ({
 	onPress,
 }: SectionHeaderProps) => {
 	return (
-		<View className="">
+		<View className="mb-2">
 			<View className="flex-row items-center justify-between">
 				<View className="flex flex-row items-center justify-center">
 					{/* round line design */}
 					<View className="w-[3px] h-[16px] rounded-full mr-[6px] bg-light-pallete-300 dark:bg-light-pallete-400"></View>
-					<Text className="text-sm font-nexa-extrabold text-gray-900 dark:text-white">
+					<Text className="text-base font-nexa-extrabold text-gray-900 dark:text-white">
 						{label}
 					</Text>
 				</View>

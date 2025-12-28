@@ -1,3 +1,4 @@
+import add from '@/assets/icons/add.png';
 import legal from '@/assets/icons/agreement.png';
 import apple from '@/assets/icons/apple.png';
 import verifiedBadge from '@/assets/icons/approve.png';
@@ -6,17 +7,19 @@ import bagOutline from '@/assets/icons/bag-outline.png';
 import bag from '@/assets/icons/bag.png';
 import basketOutline from '@/assets/icons/basket-outline.png';
 import basket from '@/assets/icons/basket.png';
+import bookmark from '@/assets/icons/bookmark.png';
+import bookmarkFilled from '@/assets/icons/bookmarkFilled.png';
+import briefcase from '@/assets/icons/briefcase.png';
 import calendar from '@/assets/icons/calendar.png';
 import call from '@/assets/icons/call.png';
 import camera from '@/assets/icons/camera.png';
 import cartOutline from '@/assets/icons/cart-outline.png';
 import chat from '@/assets/icons/chat.png';
-import {
-	default as check,
-	default as checkmark,
-} from '@/assets/icons/check.png';
+import { default as check } from '@/assets/icons/check.png';
 import checklistOutline from '@/assets/icons/checklist-outline.png';
 import checklist from '@/assets/icons/checklist.png';
+import checkmark from '@/assets/icons/checkmark.png';
+import clock from '@/assets/icons/clock.png';
 import close from '@/assets/icons/close.png';
 import cod from '@/assets/icons/cod.png';
 import compassOutline from '@/assets/icons/compass-outline.png';
@@ -25,6 +28,7 @@ import card from '@/assets/icons/credit-card.png';
 import cross from '@/assets/icons/cross.png';
 import discount from '@/assets/icons/discount.png';
 import dollar from '@/assets/icons/dollar.png';
+import doubleTick from '@/assets/icons/double-tick.png';
 import edit from '@/assets/icons/edit.png';
 import email from '@/assets/icons/email.png';
 import expressDelivery from '@/assets/icons/express-delivery.png';
@@ -65,7 +69,6 @@ import password from '@/assets/icons/password.png';
 import person from '@/assets/icons/person.png';
 import promoCode from '@/assets/icons/promo-code.png';
 import faqs from '@/assets/icons/question.png';
-import reputation from '@/assets/icons/reputation.png';
 import rupee from '@/assets/icons/rupee.png';
 import sameDayDelivery from '@/assets/icons/same-day-delivery.png';
 import scan from '@/assets/icons/scan.png';
@@ -90,10 +93,16 @@ import wishlist from '@/assets/icons/wishlist.png';
 
 export const icons = {
 	thankyou,
+	add,
+	bookmark,
+	bookmarkFilled,
+	clock,
 	rupee,
-	reputation,
+	checkmark,
 	discount,
 	suitcase,
+	briefcase,
+	doubleTick,
 	checklistOutline,
 	checklist,
 	camera,
@@ -138,7 +147,6 @@ export const icons = {
 	heart,
 	password,
 	heartOutline,
-	checkmark,
 	close,
 	dollar,
 	email,

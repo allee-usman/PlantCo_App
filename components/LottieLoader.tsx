@@ -8,11 +8,13 @@ interface LottieLoaderProps {
 	size?: number; // width & height
 	color?: string; // overlay color
 	style?: ViewStyle; // extra styling if needed
+	loop?: boolean;
 }
 
 const LottieLoader: React.FC<LottieLoaderProps> = ({
 	animation,
 	size = 40,
+	loop = true,
 	color = COLORS.gray[900],
 	style,
 }) => {
@@ -21,14 +23,14 @@ const LottieLoader: React.FC<LottieLoaderProps> = ({
 			<LottieView
 				source={animation}
 				autoPlay
-				loop
+				loop={loop}
 				style={{ width: size, height: size }}
-				colorFilters={[
-					{
-						keypath: '*',
-						color: color,
-					},
-				]}
+				// colorFilters={[
+				// 	{
+				// 		keypath: '*',
+				// 		color: color,
+				// 	},
+				// ]}
 			/>
 		</View>
 	);

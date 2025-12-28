@@ -1,12 +1,28 @@
 import CustomHeader from '@/components/CustomHeader';
+import { COLORS } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { Platform, TouchableOpacity } from 'react-native';
+import { useColorScheme } from 'nativewind';
+import { Platform, TouchableOpacity, View } from 'react-native';
 // import { useTheme } from '@/hooks/useTheme';
 
 export default function ServicesLayout() {
 	// const { colors } = useTheme();
 	const router = useRouter();
+	const { colorScheme } = useColorScheme();
+	const isDark = colorScheme === 'dark';
+
+	const renderIcon = (src: string) => {
+		return (
+			<View className="w-[40px] h-[40px] rounded-full items-center justify-center">
+				<Ionicons
+					name={src as any} //TODO: Change type
+					size={24}
+					color={isDark ? COLORS.gray[100] : COLORS.gray[950]}
+				/>
+			</View>
+		);
+	};
 
 	return (
 		<Stack
@@ -66,31 +82,27 @@ export default function ServicesLayout() {
 				}}
 			/>
 			<Stack.Screen
-				name="service/[id]"
+				name="service/[serviceId]"
 				options={{
-					headerTitle: 'Service Details',
-					headerLeft: () => (
-						<TouchableOpacity
-							onPress={() => router.back()}
-							style={{ marginLeft: 10 }}
-						>
-							<Ionicons name="arrow-back" size={24} color={'#000000'} />
-						</TouchableOpacity>
-					),
+					headerShown: false,
 				}}
 			/>
 			<Stack.Screen
-				name="booking/[id]"
+				name="booking/[serviceId]"
 				options={{
-					headerTitle: 'Book Service',
-					headerLeft: () => (
-						<TouchableOpacity
-							onPress={() => router.back()}
-							style={{ marginLeft: 10 }}
-						>
-							<Ionicons name="arrow-back" size={24} color={'#000000'} />
-						</TouchableOpacity>
-					),
+					headerShown: false,
+				}}
+			/>
+			<Stack.Screen
+				name="booking/confirmation"
+				options={{
+					headerShown: false,
+				}}
+			/>
+			<Stack.Screen
+				name="profile/[providerId]"
+				options={{
+					headerShown: false,
 				}}
 			/>
 		</Stack>

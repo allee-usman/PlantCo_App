@@ -11,8 +11,10 @@ const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabPress }) => {
 	const tabs: { key: TabType; label: string }[] = [
 		{ key: 'all', label: 'All' },
 		{ key: 'upcoming', label: 'Upcoming' },
+		{ key: 'in_progress', label: 'In Progress' },
 		{ key: 'completed', label: 'Completed' },
 		{ key: 'cancelled', label: 'Cancelled' },
+		{ key: 'rejected', label: 'Rejected' },
 	];
 
 	return (

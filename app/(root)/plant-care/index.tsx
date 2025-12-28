@@ -1,3 +1,5 @@
+// screens/ServicesScreen.tsx - Updated version with refresh capability
+
 import HomeHeader from '@/components/HomeHeader';
 import { ServicesTab } from '@/components/ServicesTab';
 import {
@@ -7,7 +9,7 @@ import {
 } from '@/constants/constant';
 import { useTabData } from '@/hooks/useTabData';
 import { useColorScheme } from 'nativewind';
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Animated, StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,6 +18,7 @@ const ServicesScreen = () => {
 	const { colorScheme } = useColorScheme();
 	const isDark = colorScheme === 'dark';
 	const { activeTabId, handleTabPress } = useTabData();
+	const [refreshing, setRefreshing] = useState(false);
 
 	const headerHeight = scrollY.interpolate({
 		inputRange: [0, HEADER_SCROLL_DISTANCE],
@@ -29,6 +32,23 @@ const ServicesScreen = () => {
 		extrapolate: 'clamp',
 	});
 
+	const handleRefresh = useCallback(async () => {
+		setRefreshing(true);
+
+		try {
+			// Simulate refresh or trigger actual data refresh
+			// The ServiceSectionRenderer components will refetch their data
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+
+			// You can dispatch a refresh action here if using Redux
+			// or trigger a refetch in your data fetching hooks
+		} catch (error) {
+			console.error('Refresh failed:', error);
+		} finally {
+			setRefreshing(false);
+		}
+	}, []);
+
 	return (
 		<SafeAreaView
 			className="flex-1 bg-light-screen dark:bg-gray-950"
@@ -39,7 +59,6 @@ const ServicesScreen = () => {
 				translucent
 				backgroundColor="transparent"
 			/>
-
 			<HomeHeader
 				scrollY={scrollY}
 				variant="service"
@@ -49,9 +68,12 @@ const ServicesScreen = () => {
 				headerHeight={headerHeight}
 				headerShadowOpacity={headerShadowOpacity}
 			/>
-
-			<View>
-				<ServicesTab scrollY={scrollY} />
+			<View className="flex-1">
+				<ServicesTab
+					scrollY={scrollY}
+					onRefresh={handleRefresh}
+					refreshing={refreshing}
+				/>
 			</View>
 		</SafeAreaView>
 	);

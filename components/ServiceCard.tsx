@@ -1,6 +1,6 @@
-import { animations } from '@/constants/animations';
 import { COLORS } from '@/constants/colors';
 import { icons } from '@/constants/icons';
+import { formatServiceType } from '@/utils/service.utils';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
@@ -12,7 +12,6 @@ import {
 	useColorScheme,
 	useWindowDimensions,
 } from 'react-native';
-import LottieLoader from './LottieLoader';
 
 interface ServiceCardProps {
 	// Required props
@@ -39,7 +38,7 @@ interface ServiceCardProps {
 	height?: number;
 	fullWidth?: boolean;
 
-	// Callback props
+	// Event handlers
 	onPress?: () => void;
 	onBookPress?: () => void;
 	onFavoriteToggle?: () => void;
@@ -47,7 +46,7 @@ interface ServiceCardProps {
 	// Loading state
 	booking?: boolean;
 
-	// Style props
+	// Styling customization props
 	className?: string;
 	imageClassName?: string;
 
@@ -60,15 +59,19 @@ const StarRating: React.FC<{
 	reviewCount?: number;
 	size?: number;
 }> = ({ rating, reviewCount, size = 12 }) => {
+	// FIXED: Clamped rating between 0-5 to prevent UI breaks
+	const clampedRating = Math.max(0, Math.min(5, rating));
 	return (
 		<View className="flex-row items-center gap-1">
 			<View className="flex-row gap-0.5">
 				{[...Array(5)].map((_, i) => {
-					const difference = rating - i;
+					const difference = clampedRating - i;
 
 					return (
 						<View key={i} className="relative">
+							{/* Outline star as background */}
 							<AntDesign name="staro" size={size} color="#FFA500" />
+							{/* Filled star overlay with dynamic width for partial fills */}
 							{difference > 0 && (
 								<View
 									style={{
@@ -84,9 +87,13 @@ const StarRating: React.FC<{
 					);
 				})}
 			</View>
-			<Text className="text-xs font-nexa text-gray-500 dark:text-gray-400">
-				{rating.toFixed(1)}
-			</Text>
+			{/* FIXED: Added safety check for valid rating before displaying */}
+			{!isNaN(clampedRating) && (
+				<Text className="text-xs font-nexa text-gray-600 dark:text-gray-400">
+					{clampedRating.toFixed(1)}
+				</Text>
+			)}
+			{/* Only show review count if it's a valid positive number */}
 			{reviewCount !== undefined && reviewCount > 0 && (
 				<Text className="text-xs font-nexa text-gray-500 dark:text-gray-500">
 					({reviewCount})
@@ -96,52 +103,112 @@ const StarRating: React.FC<{
 	);
 };
 
+// const StatusBadge: React.FC<{ status: 'available' | 'busy' | 'on_leave' }> = ({
+// 	status,
+// }) => {
+// 	const statusConfig = {
+// 		available: {
+// 			bg: 'bg-transparent',
+// 			text: 'text-light-pallete-500 dark:text-light-pallete-400',
+// 			label: 'Available for work',
+// 			dot: COLORS.light.pallete[400],
+// 		},
+// 		busy: {
+// 			bg: 'bg-transparent',
+// 			text: 'text-orange-700 dark:text-orange-400',
+// 			label: 'Busy',
+// 			dot: '#F97316',
+// 		},
+// 		on_leave: {
+// 			bg: 'bg-transparent',
+// 			text: 'text-blue-700 dark:text-blue-400',
+// 			label: 'On Leave',
+// 			dot: '#6B7280',
+// 		},
+// 	};
+
+// 	const config = statusConfig[status];
+
+// 	return (
+// 		<View
+// 			className={`flex-row items-center gap-1.5 py-1 rounded-full ${config.bg}`}
+// 		>
+// 			<View
+// 				style={{
+// 					width: 8,
+// 					height: 8,
+// 					borderRadius: 20,
+// 					backgroundColor: config.dot,
+// 				}}
+// 			/>
+// 			<Text className={`text-xs font-nexa-bold ${config.text}`}>
+// 				{config.label}
+// 			</Text>
+// 		</View>
+// 	);
+// };
+
+/**
+ * StatusBadge Component
+ * Displays provider availability status with appropriate color coding and label
+ *
+ * @param status - Current availability status of the provider
+ */
 const StatusBadge: React.FC<{ status: 'available' | 'busy' | 'on_leave' }> = ({
 	status,
 }) => {
-	const statusConfig = {
-		available: {
-			bg: 'bg-transparent',
-			text: 'text-light-pallete-500 dark:text-light-pallete-400',
-			label: 'Available for work',
-			dot: COLORS.light.pallete[400],
-		},
-		busy: {
-			bg: 'bg-transparent',
-			text: 'text-orange-700 dark:text-orange-400',
-			label: 'Busy',
-			dot: '#F97316',
-		},
-		on_leave: {
-			bg: 'bg-transparent',
-			text: 'text-blue-700 dark:text-blue-400',
-			label: 'On Leave',
-			dot: '#6B7280',
-		},
-	};
+	// FIXED: Moved configuration outside component to prevent recreation on each render
+	// Configuration for different status types
+	const statusConfig = useMemo(
+		() => ({
+			available: {
+				// bg: 'bg-green-50 dark:bg-green-900/20',
+				bg: 'transparent',
+				text: 'text-green-700 dark:text-green-400',
+				label: 'Available',
+				dot: '#10B981',
+			},
+			busy: {
+				// bg: 'bg-orange-50 dark:bg-orange-900/20',
+				bg: 'transparent',
+				text: 'text-orange-700 dark:text-orange-400',
+				label: 'Busy',
+				dot: '#F97316',
+			},
+			on_leave: {
+				// bg: 'bg-gray-50 dark:bg-gray-800',
+				bg: 'transparent',
+				text: 'text-gray-700 dark:text-gray-400',
+				label: 'On Leave',
+				dot: '#6B7280',
+			},
+		}),
+		[]
+	);
 
 	const config = statusConfig[status];
 
 	return (
 		<View
-			className={`flex-row items-center gap-1.5 py-1 rounded-full ${config.bg}`}
+			className={`flex-row items-center gap-1.5 px-0.5 py-1 rounded-full ${config.bg}`}
 		>
+			{/* Status indicator dot */}
 			<View
 				style={{
-					width: 8,
-					height: 8,
-					borderRadius: 20,
+					width: 6,
+					height: 6,
+					borderRadius: 3,
 					backgroundColor: config.dot,
 				}}
 			/>
-			<Text className={`text-xs font-nexa-bold ${config.text}`}>
+			<Text className={`text-[10px] font-nexa-bold ${config.text}`}>
 				{config.label}
 			</Text>
 		</View>
 	);
 };
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({
+const ServiceCard: React.FC<ServiceCardProps> = ({
 	image,
 	name,
 	bio,
@@ -188,7 +255,13 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 		}
 		return image;
 	}, [image]);
+	// console.log('Rating: ', rating);
+	// console.log('Review Count: ', reviewCount);
 
+	/**
+	 * Handles the book button press
+	 * Prevents event bubbling to parent Pressable and validates booking conditions
+	 */
 	const handleBookPress = (e: any) => {
 		e.stopPropagation();
 		if (onBookPress && !booking && status !== 'on_leave') {
@@ -196,6 +269,10 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 		}
 	};
 
+	/**
+	 * Handles favorite toggle interaction
+	 * Prevents event bubbling to parent Pressable
+	 */
 	const handleFavoriteToggle = (e: any) => {
 		e.stopPropagation();
 		if (onFavoriteToggle) {
@@ -212,6 +289,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 			}`}
 			accessibilityLabel={accessibilityLabel || `${name} service provider card`}
 			accessibilityRole="button"
+			accessibilityHint="Double tap to view provider details"
 		>
 			{/* Profile Image Container */}
 			<View className="relative rounded-xl" style={{ width: 100 }}>
@@ -222,6 +300,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 						imageClassName || ''
 					}`}
 					resizeMode="cover"
+					accessibilityLabel={`${name}'s profile picture`}
 				/>
 
 				{/* Favorite Button */}
@@ -239,23 +318,23 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 					</Pressable>
 				)}
 
-				{/* Discount Badge */}
-				{/* {discount && discount > 0 && (
-					<View className="absolute bottom-2 right-2 bg-red-500 px-2 py-1 rounded-full">
-						<Text className="text-xs font-nexa-bold text-white">
+				{/* discount badge with better positioning */}
+				{discount && discount > 0 && (
+					<View className="absolute top-2 left-2 bg-red-500 px-2 py-0.5 rounded-full shadow-md">
+						<Text className="text-[10px] font-nexa-bold text-white">
 							{discount}% OFF
 						</Text>
 					</View>
-				)} */}
+				)}
 			</View>
 
 			{/* Content Container */}
-			<View className="flex-1 pl-3 py-1 justify-between ">
-				{/* Provider Info */}
-				<View className="mb-2">
+			<View className="flex-1 pl-2 py-1">
+				{/* Top Section: Provider Info */}
+				<View>
 					{/* Name and Verified */}
-					<View className="flex-row items-center justify-between mb-2">
-						<View className="flex-row items-center gap-1">
+					<View className="flex-row items-center justify-between mb-1.5">
+						<View className="flex-row items-center gap-1 mr-2">
 							<Text
 								className="text-sm font-nexa-extrabold text-gray-900 dark:text-gray-100"
 								numberOfLines={1}
@@ -273,16 +352,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 							)}
 						</View>
 
+						{/*  price badge */}
 						<View className="ml-2 bg-gray-50 dark:bg-gray-800 rounded-md p-1.5">
 							<View className="flex-row items-center">
 								<Image
 									source={icons.rupee}
-									className="size-5 mr-0.5"
+									className="size-4 mr-0.5"
 									tintColor={isDark ? COLORS.gray[100] : COLORS.gray[900]}
 									resizeMode="cover"
 								/>
 								<Text className="text-xs font-nexa-bold text-gray-900 dark:text-gray-100">
-									{price.toLocaleString()}
+									{price}
+									{/* {price.toLocaleString()} */}
 								</Text>
 								<Text className="text-[10px] font-nexa text-gray-500 dark:text-gray-500">
 									/hr
@@ -291,12 +372,19 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 						</View>
 					</View>
 
+					{/* Rating */}
+					{rating !== undefined && (
+						<View className="mb-2">
+							<StarRating rating={rating} reviewCount={reviewCount} />
+						</View>
+					)}
+
 					{/* Bio */}
 					{bio && (
 						<Text
-							className="text-xs font-nexa text-gray-500 dark:text-gray-400 mb-2"
 							numberOfLines={2}
 							ellipsizeMode="tail"
+							className="text-xs font-nexa text-gray-600 dark:text-gray-400 mb-2 leading-4"
 						>
 							{bio}
 						</Text>
@@ -308,86 +396,85 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 							{specialities.slice(0, 2).map((speciality, index) => (
 								<View
 									key={index}
-									className="bg-light-pallete-50 dark:bg-light-pallete-900/20 px-2 py-0.5 rounded-full"
+									className="bg-light-pallete-50 dark:bg-light-pallete-900/20 px-2 py-1 rounded-full border border-light-pallete-200 dark:border-light-pallete-800"
 								>
 									<Text
-										className="text-xs font-nexa text-light-pallete-700 dark:text-light-pallete-400"
+										className="text-[10px] font-nexa-bold text-light-pallete-700 dark:text-light-pallete-400"
 										numberOfLines={1}
 									>
-										{speciality}
+										{formatServiceType(speciality)}
 									</Text>
 								</View>
 							))}
 							{specialities.length > 2 && (
-								<View className="bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-									<Text className="text-xs font-nexa text-gray-700 dark:text-gray-400">
+								<View className="bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700">
+									<Text className="text-[10px] font-nexa-bold text-gray-600 dark:text-gray-400">
 										+{specialities.length - 2}
 									</Text>
 								</View>
 							)}
 						</View>
 					)}
-
-					{/* Status Badge */}
-					<View className="">
-						<StatusBadge status={status} />
-					</View>
 				</View>
 
-				{/* Rating */}
-				{rating > 0 && (
-					<View className="mb-2">
-						<StarRating rating={rating} reviewCount={reviewCount} />
+				{/* Bottom Section: Status and Stats */}
+				<View>
+					{/* Status Badge */}
+					<View className="mb-1">
+						<StatusBadge status={status} />
 					</View>
-				)}
 
-				{/* Stats Row */}
-				<View className="flex-row items-center flex-wrap gap-x-3 gap-y-1 mb-2">
-					{experience && (
-						<View className="flex-row items-center gap-1">
-							<Image
-								source={icons.suitcase}
-								className="size-4"
-								tintColor={isDark ? '#9CA3AF' : '#6B7280'}
-							/>
-							<Text className="text-xs font-nexa text-gray-500 dark:text-gray-400">
-								{experience}
-							</Text>
+					{/* Location and Stats Row  */}
+					<View className="flex-row items-center justify-between">
+						{/* Location */}
+						{location && (
+							<View className="flex-row items-center gap-1 flex-1 mr-2">
+								<Image
+									source={icons.locationOutline}
+									className="size-3"
+									tintColor={isDark ? '#9CA3AF' : '#6B7280'}
+								/>
+								<Text
+									className="text-[10px] font-nexa text-gray-600 dark:text-gray-400"
+									numberOfLines={1}
+								>
+									{location}
+								</Text>
+							</View>
+						)}
+						{/* Stats */}
+						<View className="flex-row items-center gap-2">
+							{experience && (
+								<View className="flex-row items-center gap-1.5">
+									<Image
+										source={icons.briefcase}
+										className="size-3"
+										tintColor={isDark ? '#9CA3AF' : '#6B7280'}
+									/>
+									<Text className="text-[10px] font-nexa text-gray-600 dark:text-gray-400">
+										{experience}
+									</Text>
+								</View>
+							)}
+							{completedJobs !== undefined && completedJobs > 0 && (
+								<View className="flex-row items-center gap-0.5">
+									<Image
+										source={icons.doubleTick}
+										className="size-4"
+										tintColor={isDark ? '#9CA3AF' : '#6B7280'}
+									/>
+									<Text className="text-[10px] font-nexa text-gray-600 dark:text-gray-400">
+										{completedJobs}
+									</Text>
+								</View>
+							)}
 						</View>
-					)}
-					{completedJobs !== undefined && completedJobs > 0 && (
-						<View className="flex-row items-center gap-1">
-							<Image
-								source={icons.reputation}
-								className="size-6"
-								tintColor={isDark ? '#9CA3AF' : '#6B7280'}
-							/>
-							<Text className="text-xs font-nexa text-gray-500 dark:text-gray-400">
-								{completedJobs} jobs
-							</Text>
-						</View>
-					)}
+						<View />
+					</View>
 				</View>
 
 				{/*  Book Button & Location */}
-				<View className="flex-row items-center">
-					{/* Location */}
-					{location && (
-						<View className="mr-2 flex-row items-center gap-1 flex-1">
-							<Image
-								source={icons.locationOutline}
-								className="size-[16px]"
-								tintColor={isDark ? '#9CA3AF' : '#6B7280'}
-							/>
-							<Text
-								className="text-xs font-nexa text-gray-500 dark:text-gray-400"
-								numberOfLines={1}
-							>
-								{location}
-							</Text>
-						</View>
-					)}
-					{/* Book Button */}
+				{/* <View className="flex-row items-center mb-1">
 					{onBookPress && (
 						<Pressable
 							onPress={handleBookPress}
@@ -419,7 +506,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
 							)}
 						</Pressable>
 					)}
-				</View>
+				</View> */}
 			</View>
 		</Pressable>
 	);

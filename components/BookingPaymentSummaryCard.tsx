@@ -9,7 +9,7 @@ interface BookingPaymentSummaryCardProps {
 	discount?: number;
 	taxes?: number;
 	paymentMethod: 'cash' | 'card' | 'wallet' | string;
-	status: 'paid' | 'unpaid' | 'pending' | 'failed' | string;
+	status: boolean;
 	currency?: string; // 👈 optional: allow different currency codes
 }
 
@@ -134,9 +134,9 @@ const BookingPaymentSummaryCard: React.FC<BookingPaymentSummaryCardProps> = ({
 						Status
 					</Text>
 					<Text
-						className={`font-nexa-bold text-body-xs capitalize ${
-							statusColors[status] ?? 'text-gray-700 dark:text-gray-300'
-						}`}
+						className={
+							'font-nexa-bold text-body-xs capitalize text-green-600 dark:text-green-500'
+						}
 					>
 						{status}
 					</Text>

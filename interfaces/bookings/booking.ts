@@ -1,7 +1,13 @@
-export type TabType = 'all' | 'upcoming' | 'completed' | 'cancelled';
+export type TabType =
+	| 'all'
+	| 'upcoming'
+	| 'in_progress'
+	| 'completed'
+	| 'cancelled'
+	| 'rejected';
 
 export interface ServiceProvider {
-	id: number;
+	id: string;
 	name: string;
 	rating: number;
 	ratePerHour: number;

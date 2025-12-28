@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { Platform, View } from 'react-native';
 // import { useTheme } from '@/hooks/useTheme';
-import CustomHeader from '@/components/CustomHeader';
 import { COLORS } from '@/constants/colors';
 import { useColorScheme } from 'nativewind';
 
@@ -35,49 +34,15 @@ export default function MyBookingsLayout() {
 			<Stack.Screen
 				name="index"
 				options={{
-					header: () => (
-						<CustomHeader
-							title="My Bookings"
-							onIconLeftPress={() => {
-								router.back();
-							}}
-							iconLeft={renderIcon('chevron-back-outline')}
-							iconRight={
-								<View className="w-[40px] h-[40px] bg-light-surface dark:bg-gray-900 rounded-full items-center justify-center dark:border dark:border-gray-800">
-									<Ionicons
-										name="search-outline"
-										size={24}
-										color={isDark ? COLORS.gray[100] : COLORS.gray[950]}
-									/>
-								</View>
-							}
-							onIconRightPress={() => {
-								// Handle search functionality
-								console.log('Search bookings');
-							}}
-						/>
-					),
+					headerShown: false,
 				}}
 			/>
 
 			{/* Dynamic Booking Details Screen */}
 			<Stack.Screen
-				name="[id]"
+				name="[bookingId]"
 				options={{
-					header: () => (
-						<CustomHeader
-							title="Booking Details"
-							iconLeft={renderIcon('chevron-back-outline')}
-							onIconLeftPress={() => {
-								router.back();
-							}}
-							iconRight={renderIcon('ellipsis-horizontal-outline')}
-							onIconRightPress={() => {
-								// Handle more options (share, report, etc.)
-								console.log('More options');
-							}}
-						/>
-					),
+					headerShown: false,
 				}}
 			/>
 

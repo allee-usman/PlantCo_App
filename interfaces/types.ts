@@ -179,5 +179,6 @@ export interface Section {
 	title: string;
 	subtitle?: string;
 	filters?: Record<string, any>;
+	mode?: 'service' | 'provider';
 	config?: SectionConfig;
 }

@@ -38,7 +38,7 @@ export default function LoginScreen() {
 	// states
 	const [formData, setFormData] = useState<SigninFormTypes>({
 		//TODO: remove hardcoded values when testing is done
-		email: 'aliusman@example.com',
+		email: 'aliusman429040@gmail.com',
 		password: 'Password123!',
 		rememberMe: true,
 	});

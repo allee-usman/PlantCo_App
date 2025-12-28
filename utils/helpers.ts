@@ -4,7 +4,7 @@ import { ButtonProps } from '@/interfaces/interface';
 export const getBgVariantStyle = (variant: ButtonProps['bgVariant']) => {
 	switch (variant) {
 		case 'primary':
-			return 'bg-light-pallete-300';
+			return 'bg-light-pallete-400 dark:bg-light-pallete-300';
 		case 'secondary':
 			return 'bg-gray-200 dark:bg-gray-700';
 		case 'danger':
@@ -12,7 +12,7 @@ export const getBgVariantStyle = (variant: ButtonProps['bgVariant']) => {
 		case 'success':
 			return 'bg-green-500 dark:bg-green-400';
 		case 'outline':
-			return 'bg-transparent dark:border-light-pallete-300 border-light-pallete-400 border-[1.5px]';
+			return 'bg-transparent dark:border-light-pallete-500 border-light-pallete-400 border-[1.5px]';
 		default:
 			return 'bg-light-pallete-300';
 	}
@@ -21,7 +21,7 @@ export const getBgVariantStyle = (variant: ButtonProps['bgVariant']) => {
 export const getTextVariantStyle = (variant: ButtonProps['textVariant']) => {
 	switch (variant) {
 		case 'primary':
-			return 'text-gray-800';
+			return 'text-white dark:text-gray-950';
 		case 'secondary':
 			return 'text-gray-700 dark:text-gray-100';
 		case 'danger':
@@ -33,7 +33,7 @@ export const getTextVariantStyle = (variant: ButtonProps['textVariant']) => {
 		case 'outline':
 			return 'dark:text-gray-50 text-gray-700';
 		default:
-			return 'dark:text-gray-950 text-light-pallete-950';
+			return 'dark:text-gray-950 text-white';
 	}
 };
 

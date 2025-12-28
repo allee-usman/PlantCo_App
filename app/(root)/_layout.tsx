@@ -155,7 +155,7 @@ export default function Layout() {
 			<Tabs.Screen
 				name="plant-care"
 				options={{
-					title: 'Plant Care',
+					title: 'Services',
 					headerShown: false,
 					tabBarIcon: ({ focused }) => (
 						<TabIcon

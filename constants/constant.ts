@@ -45,6 +45,37 @@ export const shippingOptions: ShippingOption[] = [
 	},
 ];
 
+export const services = [
+	{
+		id: '1',
+		name: 'Electrician',
+		image: 'https://images.pexels.com/photos/5854182/pexels-photo-5854182.jpeg',
+		price: 1200,
+		rating: 4.7,
+		reviewCount: 89,
+		specialities: ['Wiring', 'House Repair', 'Installations'],
+		status: 'available',
+		experience: '5 years experience',
+		location: 'Johar Town, Lahore',
+		completedJobs: 210,
+		verified: true,
+	},
+	{
+		id: '2',
+		name: 'Plumber',
+		image: 'https://images.pexels.com/photos/5854202/pexels-photo-5854202.jpeg',
+		price: 900,
+		rating: 4.5,
+		reviewCount: 56,
+		specialities: ['Leak Fix', 'Pipes', 'Water Motor'],
+		status: 'busy',
+		experience: '3 years experience',
+		location: 'Wapda Town, Lahore',
+		completedJobs: 140,
+		verified: true,
+	},
+];
+
 // OTP Input Constants
 export const CELL_COUNT = 4;
 export const RESEND_COOLDOWN = 60; // 1 minute
@@ -173,106 +204,157 @@ export const PLANT_SECTIONS: Section[] = [
 		},
 	},
 ];
+
 export const SERVICE_SECTIONS: Section[] = [
 	{
 		id: 'quick-categories',
-		title: 'Quick Categories',
+		title: 'Service Categories',
 	},
+
 	{
 		id: 'promo-banner',
-		title: 'Special Offers',
-
+		title: 'Hot Deals',
 		config: {
-			backgroundColor: '#f5f5f5',
-			layout: 'banner', // 🪄 No product fetch, just banner
+			layout: 'banner',
 			autoScroll: true,
+			backgroundColor: '#f5f5f5',
 		},
 	},
 
 	{
-		id: 'top-rated',
-		title: 'Top Rated Gardner',
-		subtitle: 'Best gardner in your area',
+		id: 'near-you',
+		title: 'Providers Near You',
+		subtitle: 'Based on your location',
+		mode: 'provider',
 		config: {
-			layout: 'horizontal', // 👈 Horizontal scroll
-			// backgroundColor: '#E8F5E9',
+			layout: 'horizontal',
+			backgroundColor: 'transparent',
 		},
-		filters: {
-			type: 'plant',
-			onSale: true,
-			limit: 8,
-			sort: 'price:desc',
-		},
-	},
 
-	{
-		id: 'wishlist',
-		title: 'Add to your Wishlist',
-		config: {
-			layout: 'horizontal', // 👈 Horizontal scroll
-			// backgroundColor: '#FFFDE7',
-		},
 		filters: {
-			type: 'plant',
-			bestseller: true,
+			type: 'service',
+			locationBased: true,
 			limit: 6,
 		},
 	},
 
 	{
-		id: 'must-have',
-		title: 'Must-have Plants',
+		id: 'popular',
+		title: 'Popular Services',
+		subtitle: 'Most booked providers',
+		mode: 'service',
 		config: {
-			layout: 'horizontal', // 👈 Horizontal scroll
-			// backgroundColor: '#E3F2FD',
+			backgroundColor: 'transparent',
+			layout: 'grid',
+			numColumns: 1,
 		},
+
 		filters: {
-			type: 'plant',
-			careLevel: 'beginner',
+			type: 'service',
+			sort: 'completedJobs:desc',
 			limit: 6,
 		},
 	},
 
+	// -------------------------
+	// CATEGORY-WISE SECTIONS
+	// -------------------------
+
 	{
-		id: 'lawn-upgrade',
-		title: 'Your Lawn Upgrade',
+		id: 'lawn-care',
+		title: 'Lawn Care',
+		subtitle: 'Keep your lawn fresh and tidy',
+		mode: 'service',
 		config: {
-			layout: 'horizontal', // 👈 Horizontal scroll
-			// backgroundColor: '#F1F8E9',
+			layout: 'grid',
+			numColumns: 1,
+			backgroundColor: 'transparent',
 		},
+
 		filters: {
-			type: 'accessory',
-			tags: ['lawn'],
-			inStock: true,
-			limit: 8,
+			serviceTypes: ['landscaping', 'lawn_mowing', 'fertilization'],
 		},
 	},
 
 	{
-		id: 'craft',
-		title: 'Craft your Garden',
-
+		id: 'garden-design',
+		title: 'Garden Design & Build',
+		subtitle: 'Design, create, and transform gardens',
+		mode: 'service',
 		config: {
-			layout: 'horizontal', // 👈 Horizontal scroll
-			// backgroundColor: '#FFF3E0',
+			layout: 'grid',
+			numColumns: 1,
+			backgroundColor: 'transparent',
 		},
+
 		filters: {
-			type: 'accessory',
-			limit: 8,
+			serviceTypes: ['garden_design', 'plant_installation'],
 		},
 	},
 
 	{
-		id: 'spotlight',
-		title: "Spotlight's On",
+		id: 'tree-services',
+		title: 'Tree Services',
+		subtitle: 'Shaping, trimming and care',
+		mode: 'service',
 		config: {
-			layout: 'horizontal', // 👈 Horizontal scroll
-			// backgroundColor: '#EDE7F6',
+			layout: 'grid',
+			numColumns: 1,
+			backgroundColor: 'transparent',
 		},
+
 		filters: {
-			type: 'plant',
-			seasonal: true,
-			limit: 6,
+			serviceTypes: ['tree_trimming'],
+		},
+	},
+
+	{
+		id: 'plant-care',
+		title: 'Plant Care & Maintenance',
+		subtitle: 'Healthy, happy plants all year',
+		mode: 'service',
+		config: {
+			layout: 'grid',
+			numColumns: 1,
+			backgroundColor: 'transparent',
+		},
+
+		filters: {
+			serviceTypes: ['plant_care', 'seasonal_cleanup'],
+		},
+	},
+
+	{
+		id: 'pest-disease',
+		title: 'Pest & Disease Control',
+		subtitle: 'Protect your plants and lawn',
+		mode: 'service',
+
+		config: {
+			layout: 'grid',
+			numColumns: 1,
+			backgroundColor: 'transparent',
+		},
+
+		filters: {
+			serviceTypes: ['pest_control'],
+		},
+	},
+
+	{
+		id: 'consultation',
+		title: 'Expert Advice',
+		subtitle: 'Talk to a garden specialist',
+		mode: 'service',
+
+		config: {
+			layout: 'grid',
+			numColumns: 1,
+			backgroundColor: 'transparent',
+		},
+
+		filters: {
+			serviceTypes: ['consultation'],
 		},
 	},
 ];

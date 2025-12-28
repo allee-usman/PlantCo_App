@@ -1,13 +1,13 @@
 import { COLORS } from '@/constants/colors';
 import { icons } from '@/constants/icons';
 import { images } from '@/constants/images';
-import { ServiceProvider } from '@/interfaces/interface';
+import { IProviderRef } from '@/types/booking.types';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, Linking, Text, TouchableOpacity, View } from 'react-native';
 
 interface ServiceProviderCardProps {
-	provider: ServiceProvider;
+	provider: IProviderRef;
 }
 
 const ServiceProviderCard: React.FC<ServiceProviderCardProps> = ({
@@ -23,10 +23,10 @@ const ServiceProviderCard: React.FC<ServiceProviderCardProps> = ({
 
 	return (
 		<View>
-			<Text className="text-body-sm ml-4 font-nexa-extrabold text-gray-900 dark:text-white mb-2">
+			<Text className="text-body-sm font-nexa-extrabold text-gray-900 dark:text-white mb-2">
 				Provider Details
 			</Text>
-			<View className="bg-light-surface dark:bg-gray-800 rounded-xl p-4 mx-4 mb-4">
+			<View className="bg-light-surface dark:bg-gray-800 rounded-xl p-4 mb-4">
 				<View className="flex-row items-center mb-3">
 					<View className="w-[48px] h-[48px] mr-3" style={{ borderRadius: 99 }}>
 						<Image
@@ -37,7 +37,7 @@ const ServiceProviderCard: React.FC<ServiceProviderCardProps> = ({
 					</View>
 					<View className="flex-1 gap-y-1">
 						<Text className="font-nexa-extrabold text-body text-gray-900 dark:text-white">
-							{provider.name}
+							{provider.serviceProviderProfile?.businessName}
 						</Text>
 						<View className="flex-row items-center">
 							<Image
@@ -47,7 +47,8 @@ const ServiceProviderCard: React.FC<ServiceProviderCardProps> = ({
 								// tintColor="#FFD700"
 							/>
 							<Text className="text-gray-600 dark:text-gray-400 ml-1 text-body-xs">
-								{provider.rating} ({provider.totalReviews} reviews)
+								{provider?.serviceProviderProfile?.stats?.averageRating} (
+								{provider.serviceProviderProfile?.stats?.totalReviews} reviews)
 							</Text>
 						</View>
 					</View>

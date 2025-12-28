@@ -1,25 +1,32 @@
 // import { ObjectId } from 'mongoose';
 
 import { Address } from '@/interfaces/types';
+import { ServiceType } from './service.types';
+
+/* =======================
+   Shared / Common Types
+======================= */
+
+export type UserRole = 'customer' | 'admin' | 'vendor' | 'service_provider';
+export type UserStatus = 'active' | 'disabled' | 'suspended';
 
 export interface Avatar {
 	url: string;
 	public_id?: string;
 }
 
-// export interface NotificationSettings {
-// 	enableNotifications: boolean;
-// 	emailAlerts: boolean;
-// 	customerAlerts: boolean;
-// 	vendorAlerts: boolean;
-// 	serviceAlerts: boolean;
-// }
-
 export interface NotificationSettings {
 	enableNotifications: boolean;
 	emailAlerts: boolean;
-	orderAlerts: boolean;
-	generalAlerts: boolean;
+	customerAlerts: boolean;
+	vendorAlerts: boolean;
+	serviceAlerts: boolean;
+}
+
+export interface ProfileCompletion {
+	isComplete: boolean;
+	percentage: number;
+	completedAt?: string;
 }
 
 /* -------------------- CUSTOMER PROFILE -------------------- */
@@ -37,7 +44,7 @@ export interface CustomerProfile {
 }
 
 /* -------------------- VENDOR PROFILE -------------------- */
-
+export type VendorBusinessType = 'nursery' | 'grower' | 'retailer';
 export type VendorSpecialty =
 	| 'houseplants'
 	| 'outdoor_plants'
@@ -54,7 +61,6 @@ export interface VendorStats {
 	averageRating: number;
 	totalReviews: number;
 }
-
 export interface VendorShipping {
 	canShipLive: boolean;
 	processingTime: number;
@@ -70,45 +76,67 @@ export interface VendorSocialAccounts {
 
 export interface VendorProfile {
 	businessName?: string;
-	businessType?: 'nursery' | 'grower' | 'retailer';
+	businessType?: VendorBusinessType;
 	businessLocation?: Address;
 	description?: string;
 	socialAccounts?: VendorSocialAccounts;
-	specialties: VendorSpecialty[];
+	specialties?: VendorSpecialty[];
 	stats: VendorStats;
 	shipping: VendorShipping;
 }
 
 /* -------------------- SERVICE PROVIDER PROFILE -------------------- */
+export type VerificationStatus = 'pending' | 'verified' | 'rejected';
+export type AvailabilityStatus = 'available' | 'on_leave' | 'busy';
+export type WeekDay =
+	| 'monday'
+	| 'tuesday'
+	| 'wednesday'
+	| 'thursday'
+	| 'friday'
+	| 'saturday'
+	| 'sunday';
 
-export type ServiceType =
-	| 'landscaping'
-	| 'lawn_mowing'
-	| 'garden_design'
-	| 'tree_trimming'
-	| 'irrigation_installation'
-	| 'pest_control'
-	| 'fertilization'
-	| 'seasonal_cleanup'
-	| 'plant_care'
-	| 'consultation';
-
-export interface SeasonalAvailability {
-	spring: boolean;
-	summer: boolean;
-	fall: boolean;
-	winter: boolean;
+export interface GeoLocation {
+	type: 'Point';
+	coordinates: [number, number]; // [lng, lat]
 }
 
+export interface ServiceArea {
+	radius: number;
+	unit: 'km' | 'miles';
+	cities?: string[];
+	states?: string[];
+}
+
+export interface Pricing {
+	hourlyRate?: number;
+	travelFee?: number;
+}
+
+export interface BusinessLocation {
+	address?: Address;
+	location?: GeoLocation;
+}
+export interface WorkingHours {
+	start?: string;
+	end?: string;
+}
 export interface Availability {
-	workingDays: string[];
-	workingHours: {
-		start: string;
-		end: string;
-	};
-	seasonalAvailability: SeasonalAvailability;
+	status: AvailabilityStatus;
+	workingDays: WeekDay[];
+	workingHours?: WorkingHours;
 }
 
+export interface ServiceStats {
+	totalJobs: number;
+	completedJobs: number;
+	averageRating: number;
+	totalReviews: number;
+	responseTime: number;
+	totalEarnings: number;
+	completionRate: number;
+}
 export interface Certification {
 	name: string;
 	issuedBy: string;
@@ -123,70 +151,80 @@ export interface Equipment {
 	year?: number;
 }
 
-export interface ServiceStats {
-	totalJobs: number;
-	completedJobs: number;
-	averageRating: number;
-	totalReviews: number;
-	responseTime: number;
-	completionRate: number;
-}
-
 export interface PortfolioItem {
-	title: string;
+	title?: string;
 	description?: string;
-	images?: string[];
-	serviceType?: string;
+	images: string[];
+	serviceType: string;
 	completedDate?: string;
 }
 
 export interface ServiceProviderProfile {
 	businessName?: string;
+	slogan?: string;
+	description?: string;
+	businessLocation?: BusinessLocation;
+	verificationStatus: VerificationStatus;
 	serviceTypes: ServiceType[];
-	serviceArea: {
-		radius: number;
-		zipCodes?: string[];
-		cities?: string[];
-		states?: string[];
+	serviceArea?: ServiceArea;
+	pricing?: Pricing;
+	availability?: Availability;
+	paymentDetails?: {
+		stripeAccountId?: string;
+		payeeName?: string;
 	};
-	businessLocation?: Address;
-	pricing?: {
-		hourlyRate?: number;
-		minimumCharge?: number;
-		travelFee?: number;
-	};
-	availability: Availability;
 	experience?: {
 		yearsInBusiness?: number;
-		certifications?: Certification[];
-		specializations?: string[];
+		specializations?: ServiceType[];
 	};
-	equipment?: Equipment[];
-	stats: ServiceStats;
+
+	stats?: ServiceStats;
 	portfolio?: PortfolioItem[];
 }
 
-/* -------------------- USER CORE -------------------- */
+// export interface User {
+// 	_id: string;
+// 	username: string;
+// 	email: string;
+// 	phoneNumber?: string;
+// 	role: UserRole;
+// 	status: UserStatus;
+// 	avatar: Avatar;
+// 	isVerified: boolean;
+// 	notificationSettings: NotificationSettings;
 
-export type UserRole = 'customer' | 'admin' | 'vendor' | 'service_provider';
-export type UserStatus = 'active' | 'disabled' | 'suspended';
+// 	customerProfile?: CustomerProfile;
+// 	vendorProfile?: VendorProfile;
+// 	serviceProviderProfile?: ServiceProviderProfile;
+
+// 	createdAt: string;
+// 	updatedAt: string;
+// 	businessName?: string; // virtual field
+// }
 
 export interface User {
 	_id: string;
+
 	username: string;
 	email: string;
 	phoneNumber?: string;
+	name?: string;
+
 	role: UserRole;
 	status: UserStatus;
-	avatar: Avatar;
+
+	avatar?: Avatar;
 	isVerified: boolean;
+
 	notificationSettings: NotificationSettings;
+	profileCompletion: ProfileCompletion;
 
 	customerProfile?: CustomerProfile;
 	vendorProfile?: VendorProfile;
 	serviceProviderProfile?: ServiceProviderProfile;
 
+	businessName?: string; // virtual
+
 	createdAt: string;
 	updatedAt: string;
-	businessName?: string; // virtual field
 }
