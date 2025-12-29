@@ -1,3 +1,4 @@
+import Alert from '@/components/Alert';
 import CustomButton from '@/components/CustomButton';
 import CustomInputField from '@/components/CustomInputField';
 import { icons } from '@/constants/icons';
@@ -14,12 +15,12 @@ import {
 } from '@/utils/validations';
 import { unwrapResult } from '@reduxjs/toolkit';
 import { Link, router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface SignupFormTypes {
+export interface SignupFormTypes {
 	username: string;
 	email: string;
 	password: string;
@@ -27,7 +28,8 @@ interface SignupFormTypes {
 }
 
 export default function Signup() {
-	//TODO: remove hardcoded values
+	//TODO: remove hard-coded values in production
+
 	const [formData, setFormData] = useState<SignupFormTypes>({
 		username: 'test_user',
 		email: 'aliusman429040@gmail.com',
@@ -35,19 +37,32 @@ export default function Signup() {
 		confirmPassword: 'Test@123',
 	});
 
-	//states
-	const [showPassword, setShowPassword] = useState<boolean>(true);
-	const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(true);
+	// password visibility toggles
+
+	const [show, setShow] = useState({
+		password: false,
+		confirmPassword: false,
+	});
+
+	//Track focused field (for UI highlighting)
 	const [focusedField, setFocusedField] = useState<string | null>(null);
-	const [usernameError, setUsernameError] = useState<string | null>(null);
-	const [emailError, setEmailError] = useState<string | null>(null);
-	const [passwordError, setPasswordError] = useState<string | null>(null);
-	const [confirmPasswordError, setConfirmPasswordError] = useState<
-		string | null
-	>(null);
+
+	//Centralized error storage per field
+
+	const [errors, setErrors] = useState<
+		Record<keyof SignupFormTypes, string | null>
+	>({
+		username: null,
+		email: null,
+		password: null,
+		confirmPassword: null,
+	});
+
+	//Did the user submit at least once?
+	//This helps decide when to auto-validate
 	const [wasSubmitted, setWasSubmitted] = useState(false);
 
-	// Refs for chaining
+	//refs for next focus chaining between inputs
 	const emailRef = useRef<TextInput>(null);
 	const passwordRef = useRef<TextInput>(null);
 	const confirmPasswordRef = useRef<TextInput>(null);
@@ -56,104 +71,84 @@ export default function Signup() {
 	const dispatch = useAppDispatch();
 	const { isLoading, error } = useAppSelector((state: RootState) => state.auth);
 
-	// Clear error on unmount
+	//Clear API errors when screen unmounts
 	useEffect(() => {
 		return () => {
 			dispatch(clearError());
 		};
 	}, [dispatch]);
 
-	const handleFormDataChange = (
-		field: keyof SignupFormTypes,
-		value: string
-	) => {
-		setFormData((prev) => ({
-			...prev,
-			[field]: value.trim(), // Trim all fields for consistency
-		}));
+	//Reusable validators map
 
-		// Clear error if field is being edited
-		if (error) {
-			dispatch(clearError());
-		}
+	const validators = {
+		username: () => validateUsername(formData.username),
+		email: () => validateEmail(formData.email),
+		password: () => validatePassword(formData.password),
+		confirmPassword: () =>
+			validateConfirmPassword(formData.password, formData.confirmPassword),
+	} as const;
 
-		switch (field) {
-			case 'username':
-				if (usernameError) setUsernameError(null);
-				break;
-			case 'email':
-				if (emailError) setEmailError(null);
-				break;
-			case 'password':
-				if (passwordError) setPasswordError(null);
-				break;
-			case 'confirmPassword':
-				if (confirmPasswordError) setConfirmPasswordError(null);
-				break;
-		}
+	//Toggle password or confirm password visibility
+
+	const toggleVisibility = (field: 'password' | 'confirmPassword') => {
+		setShow((prev) => ({ ...prev, [field]: !prev[field] }));
 	};
 
-	const handleUsernameBlur = () => {
+	//Generalized change handler for all fields
+
+	const handleFormDataChange = useCallback(
+		(field: keyof SignupFormTypes, value: string) => {
+			setFormData((prev) => ({
+				...prev,
+				[field]: value.trim(),
+			}));
+
+			// clear backend auth error while typing
+			if (error) dispatch(clearError());
+
+			// clear field-level error while editing
+			setErrors((prev) => ({ ...prev, [field]: null }));
+		},
+		[dispatch, error]
+	);
+
+	//Generalized blur handler for all inputs
+	//validates corresponding field
+
+	const handleBlur = (field: keyof SignupFormTypes) => {
 		setFocusedField(null);
-		if (formData.username || wasSubmitted) {
-			const error = validateUsername(formData.username);
-			setUsernameError(error);
+
+		if (formData[field] || wasSubmitted) {
+			const validationResult = validators[field]();
+			setErrors((prev) => ({ ...prev, [field]: validationResult }));
 		}
 	};
 
-	const handleEmailBlur = () => {
-		setFocusedField(null);
-		if (formData.email || wasSubmitted) {
-			const error = validateEmail(formData.email);
-			setEmailError(error);
-		}
-	};
-
-	const handlePasswordBlur = () => {
-		setFocusedField(null);
-		if (formData.password || wasSubmitted) {
-			const error = validatePassword(formData.password);
-			setPasswordError(error);
-		}
-	};
-
-	const handleConfirmPasswordBlur = () => {
-		setFocusedField(null);
-		if (formData.confirmPassword || wasSubmitted) {
-			const error = validateConfirmPassword(
-				formData.password,
-				formData.confirmPassword
-			);
-			setConfirmPasswordError(error);
-		}
-	};
-
+	//Validate all fields then submit to backend
 	const handleSignup = async () => {
 		setWasSubmitted(true);
 
-		// Clear error
-		if (error) {
-			dispatch(clearError());
-		}
+		// clear backend API error
+		if (error) dispatch(clearError());
 
-		const usernameError = validateUsername(formData.username);
-		const emailError = validateEmail(formData.email);
-		const passwordError = validatePassword(formData.password);
-		const confirmPasswordError = validateConfirmPassword(
-			formData.password,
-			formData.confirmPassword
-		);
+		// run full validation
+		const nextErrors = {
+			username: validateUsername(formData.username),
+			email: validateEmail(formData.email),
+			password: validatePassword(formData.password),
+			confirmPassword: validateConfirmPassword(
+				formData.password,
+				formData.confirmPassword
+			),
+		};
 
-		setUsernameError(usernameError);
-		setEmailError(emailError);
-		setPasswordError(passwordError);
-		setConfirmPasswordError(confirmPasswordError);
+		// update UI error state
+		setErrors(nextErrors);
 
-		// if errors, dont proceed
-		if (usernameError || emailError || passwordError || confirmPasswordError) {
-			return;
-		}
+		// if any error exists → don't submit
+		if (Object.values(nextErrors).some((err) => err)) return;
 
+		// dispatch signup
 		const action = await dispatch(
 			registerUser({
 				username: formData.username,
@@ -164,7 +159,8 @@ export default function Signup() {
 
 		try {
 			const data = unwrapResult(action);
-			// user is created, OTP sent → go to verify screen
+
+			// if user created successfully → go verify otp
 			router.push({
 				pathname: '/(auth)/verify-otp',
 				params: {
@@ -174,7 +170,7 @@ export default function Signup() {
 				},
 			});
 		} catch (err) {
-			console.error('Signup error: ', err);
+			console.error('Signup error:', err);
 		}
 	};
 
@@ -182,28 +178,28 @@ export default function Signup() {
 		<SafeAreaView className="flex-1 bg-light-screen dark:bg-gray-950">
 			<KeyboardAwareScrollView
 				contentContainerStyle={styles.container}
-				enableOnAndroid={true}
+				enableOnAndroid
 				keyboardShouldPersistTaps="handled"
 				extraScrollHeight={20}
 				showsVerticalScrollIndicator={false}
 			>
 				<View className="main-container">
+					{/* Header*/}
 					<View className="mb-10">
-						<Text className="text-title text-center mb-2">Sign Up</Text>
-						<Text className="text-body text-center text-gray-600 dark:text-gray-400 px-4">
+						<Text className="text-3xl text-gray-950 dark:text-white  font-nexa-extrabold text-center mb-2">
+							Happy to onboard you!
+						</Text>
+						<Text className="text-body text-center text-gray-500 dark:text-gray-400 px-4">
 							Just a few details and you&apos;re in.
 						</Text>
 					</View>
 
-					{error && (
-						<View className="mb-6 p-3 mx-2 bg-red-100 w-full border border-red-300 rounded-lg">
-							<Text className="text-red-700 text-center text-xs font-nexa">
-								{error}
-							</Text>
-						</View>
-					)}
+					{/* Backend error box */}
+					{error && <Alert variant="error" message={error} />}
 
+					{/* Form fields*/}
 					<View className="mb-8 w-full space-y-4">
+						{/* Username */}
 						<CustomInputField
 							placeholder="Username"
 							leftIcon={icons.userOutline}
@@ -214,14 +210,15 @@ export default function Signup() {
 							editable={!isLoading}
 							value={formData.username}
 							onChangeText={(text) => handleFormDataChange('username', text)}
-							accessibilityLabel="Username input field"
 							onSubmitEditing={() => emailRef.current?.focus()}
 							onFocus={() => setFocusedField('username')}
-							onBlur={handleUsernameBlur}
+							onBlur={() => handleBlur('username')}
 							isFocused={focusedField === 'username'}
-							error={usernameError}
+							error={errors.username}
 							roundedFull
 						/>
+
+						{/* Email */}
 						<CustomInputField
 							placeholder="Email"
 							keyboardType="email-address"
@@ -229,41 +226,42 @@ export default function Signup() {
 							autoComplete="email"
 							textContentType={TextContentType.EMAIL_ADDRESS}
 							returnKeyType="next"
-							accessibilityLabel="Email input field"
 							value={formData.email}
 							leftIcon={icons.email}
+							editable={!isLoading}
 							onChangeText={(text) => handleFormDataChange('email', text)}
 							onSubmitEditing={() => passwordRef.current?.focus()}
 							onFocus={() => setFocusedField('email')}
-							onBlur={handleEmailBlur}
+							onBlur={() => handleBlur('email')}
 							isFocused={focusedField === 'email'}
-							error={emailError}
-							editable={!isLoading}
+							error={errors.email}
 							roundedFull
 						/>
+
+						{/* Password */}
 						<CustomInputField
 							placeholder="Password"
 							leftIcon={icons.lock}
-							accessibilityLabel="Password input field"
 							editable={!isLoading}
 							returnKeyType="next"
 							autoComplete="password"
 							textContentType={TextContentType.PASSWORD}
 							value={formData.password}
 							onChangeText={(text) => handleFormDataChange('password', text)}
-							secureTextEntry={showPassword}
-							onRightIconPress={() => setShowPassword((prev) => !prev)}
+							secureTextEntry={!show.password}
+							onRightIconPress={() => toggleVisibility('password')}
 							onSubmitEditing={() => confirmPasswordRef.current?.focus()}
 							onFocus={() => setFocusedField('password')}
-							onBlur={handlePasswordBlur}
+							onBlur={() => handleBlur('password')}
 							isFocused={focusedField === 'password'}
-							error={passwordError}
+							error={errors.password}
 							roundedFull
 						/>
+
+						{/* Confirm Password */}
 						<CustomInputField
 							placeholder="Confirm Password"
 							leftIcon={icons.lock}
-							accessibilityLabel="Confirm password input field"
 							editable={!isLoading}
 							returnKeyType="done"
 							autoComplete="password-new"
@@ -272,25 +270,26 @@ export default function Signup() {
 							onChangeText={(text) =>
 								handleFormDataChange('confirmPassword', text)
 							}
-							secureTextEntry={showConfirmPassword}
-							onRightIconPress={() => setShowConfirmPassword((prev) => !prev)}
+							secureTextEntry={!show.confirmPassword}
+							onRightIconPress={() => toggleVisibility('confirmPassword')}
 							onFocus={() => setFocusedField('confirmPassword')}
-							onBlur={handleConfirmPasswordBlur}
+							onBlur={() => handleBlur('confirmPassword')}
 							isFocused={focusedField === 'confirmPassword'}
-							error={confirmPasswordError}
+							error={errors.confirmPassword}
 							roundedFull
 						/>
 					</View>
 
+					{/* Actions */}
 					<View className="w-full space-y-4">
 						<CustomButton
 							label="Sign Up"
 							onPress={handleSignup}
 							loading={isLoading}
 							disabled={isLoading}
-							accessibilityLabel="Sign up for a new account"
-							accessibilityRole="button"
 						/>
+
+						{/* Link to Login */}
 						<View className="flex-row justify-center mt-2">
 							<Link
 								href="/(auth)/login"

@@ -4,7 +4,14 @@ import { useAppSelector } from '@/redux/hooks';
 import { RootState } from '@/redux/store';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { Animated, Image, Text, TouchableOpacity, View } from 'react-native';
+import {
+	Animated,
+	Image,
+	Text,
+	TouchableOpacity,
+	useColorScheme,
+	View,
+} from 'react-native';
 import LottieLoader from './LottieLoader';
 
 interface User {
@@ -52,6 +59,8 @@ const UserHeader: React.FC<UserHeaderProps> = ({
 	});
 
 	const { user } = useAppSelector((state: RootState) => state.auth);
+	const colorScheme = useColorScheme();
+	const isDarkMode = colorScheme === 'dark';
 
 	const greetingMsg = useMemo(() => {
 		const hour = new Date().getHours();
@@ -59,6 +68,20 @@ const UserHeader: React.FC<UserHeaderProps> = ({
 		if (hour < 18) return 'Good Afternoon!';
 		return 'Good Evening!';
 	}, []);
+
+	const headerBackground = scrollY.interpolate({
+		inputRange: [0, HEADER_SCROLL_DISTANCE],
+		outputRange: isDarkMode
+			? ['rgba(0, 0, 0, 0)', 'rgba(11, 11, 11, 1)'] // transparent to dark
+			: ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 1)'], // transparent to white
+		extrapolate: 'clamp',
+	});
+
+	const shadowOpacity = scrollY.interpolate({
+		inputRange: [0, HEADER_SCROLL_DISTANCE],
+		outputRange: [0, 0.25],
+		extrapolate: 'clamp',
+	});
 
 	const handleNotificationPress = () =>
 		router.push('/(root)/home/notifications');
@@ -77,11 +100,13 @@ const UserHeader: React.FC<UserHeaderProps> = ({
 				return (
 					<View className="flex-row items-center flex-1">
 						<TouchableOpacity onPress={() => router.push('/(root)/account')}>
-							<Image
-								source={{ uri: user?.avatar.url }}
-								className="w-[40px] h-[40px] rounded-full mr-3"
-								onError={() => console.log('Failed to load avatar')}
-							/>
+							{user?.avatar && (
+								<Image
+									source={{ uri: user?.avatar.url }}
+									className="w-[40px] h-[40px] rounded-full mr-3"
+									onError={() => console.log('Failed to load avatar')}
+								/>
+							)}
 						</TouchableOpacity>
 						<View>
 							<Text className="text-xs font-nexa dark:text-gray-300 text-gray-600">
@@ -141,11 +166,13 @@ const UserHeader: React.FC<UserHeaderProps> = ({
 				return (
 					<View className="flex-row items-center flex-1">
 						<TouchableOpacity onPress={() => router.push('/(root)/account')}>
-							<Image
-								source={{ uri: user?.avatar.url }}
-								className="w-[40px] h-[40px] rounded-full mr-3"
-								onError={() => console.log('Failed to load avatar')}
-							/>
+							{user?.avatar && (
+								<Image
+									source={{ uri: user?.avatar.url }}
+									className="w-[40px] h-[40px] rounded-full mr-3"
+									onError={() => console.log('Failed to load avatar')}
+								/>
+							)}
 						</TouchableOpacity>
 						<View>
 							<Text className="text-xs font-nexa dark:text-gray-300 text-gray-600">
@@ -165,8 +192,13 @@ const UserHeader: React.FC<UserHeaderProps> = ({
 			style={{
 				opacity: greetingOpacity,
 				transform: [{ translateY: greetingTranslateY }],
+				backgroundColor: headerBackground,
+				shadowColor: '#000',
+				shadowOpacity,
+				shadowRadius: 6,
+				elevation: 4,
+				paddingHorizontal: 20,
 			}}
-			className="px-5"
 		>
 			<View className="flex-row items-center justify-between mb-4">
 				{/* header left */}

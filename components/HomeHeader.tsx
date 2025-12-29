@@ -4,15 +4,13 @@ import UserHeader from '@/components/UserHeader';
 import { COLORS } from '@/constants/colors';
 import { images } from '@/constants/images';
 import { useUserLocation } from '@/hooks/useUserLocation';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Animated, ImageBackground, StyleSheet, View } from 'react-native';
 
 interface Props {
 	scrollY: Animated.Value;
 	isDark: boolean;
 	variant?: 'default' | 'service' | 'greeting';
-	activeTabId: string;
-	onTabPress: (tabId: string) => void;
 	headerHeight: any;
 	headerShadowOpacity: any;
 }
@@ -23,13 +21,49 @@ const HomeHeader = ({
 	scrollY,
 	isDark,
 	variant = 'greeting',
-	activeTabId,
-	onTabPress,
+
 	headerHeight,
 	headerShadowOpacity,
 }: Props) => {
 	const { fullAddress, province, country, isLoading, refetch } =
 		useUserLocation();
+
+	const renderContent = useCallback(
+		() => (
+			<View className="flex-1 justify-end">
+				{variant === 'greeting' && (
+					<UserHeader
+						scrollY={scrollY}
+						HEADER_SCROLL_DISTANCE={HEADER_SCROLL_DISTANCE}
+						onCartPress={() => console.log('Cart')}
+						variant={variant}
+					/>
+				)}
+
+				{variant === 'service' && (
+					<UserHeader
+						scrollY={scrollY}
+						HEADER_SCROLL_DISTANCE={HEADER_SCROLL_DISTANCE}
+						variant="location"
+						province={province}
+						country={country}
+						fullAddress={fullAddress}
+						isLoadingLocation={isLoading}
+						onLocationPress={refetch} // Refetch on press
+					/>
+				)}
+				<View className="px-5 mb-4">
+					<SearchBar
+						variant={variant}
+						showFilterIcon={true}
+						onSearch={(query) => console.log('Searching:', query)}
+					/>
+				</View>
+			</View>
+		),
+		[fullAddress, country, isLoading, province, refetch, scrollY, variant]
+	);
+
 	return (
 		<Animated.View
 			style={[
@@ -49,49 +83,17 @@ const HomeHeader = ({
 				},
 			]}
 		>
-			<ImageBackground
-				source={isDark ? images.headerBg : images.headerBgLight}
-				resizeMode="cover"
-				className="flex-1"
-			>
-				<View className="flex-1 justify-end">
-					{variant === 'greeting' && (
-						<UserHeader
-							scrollY={scrollY}
-							HEADER_SCROLL_DISTANCE={HEADER_SCROLL_DISTANCE}
-							onCartPress={() => console.log('Cart')}
-							variant={variant}
-						/>
-					)}
-
-					{variant === 'service' && (
-						<UserHeader
-							scrollY={scrollY}
-							HEADER_SCROLL_DISTANCE={HEADER_SCROLL_DISTANCE}
-							variant="location"
-							province={province}
-							country={country}
-							fullAddress={fullAddress}
-							isLoadingLocation={isLoading}
-							onLocationPress={refetch} // Refetch on press
-						/>
-					)}
-					<View className="px-5 mb-4">
-						<SearchBar
-							variant={variant}
-							showFilterIcon={true}
-							onSearch={(query) => console.log('Searching:', query)}
-						/>
-					</View>
-					{/* <View>
-						<ShopTabs
-							tabs={TABS_DATA}
-							activeTabId={activeTabId}
-							onTabPress={onTabPress}
-						/>
-					</View> */}
-				</View>
-			</ImageBackground>
+			{!isDark ? (
+				<ImageBackground
+					source={images.headerBgLight}
+					resizeMode="cover"
+					className="flex-1"
+				>
+					{renderContent()}
+				</ImageBackground>
+			) : (
+				<View className="flex-1 bg-gray-950">{renderContent()}</View>
+			)}
 		</Animated.View>
 	);
 };

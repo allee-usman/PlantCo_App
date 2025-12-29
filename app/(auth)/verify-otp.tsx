@@ -1,3 +1,25 @@
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useReducer,
+	useRef,
+	useState,
+} from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import {
+	CodeField,
+	Cursor,
+	useBlurOnFulfill,
+	useClearByFocusCell,
+} from 'react-native-confirmation-code-field';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import Alert from '@/components/Alert';
 import CustomButton from '@/components/CustomButton';
 import LottieLoader from '@/components/LottieLoader';
@@ -15,33 +37,183 @@ import {
 } from '@/redux/slices/authSlice';
 import { RootState } from '@/redux/store';
 import { verifyEmailChange } from '@/services/user.services';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import {
-	CodeField,
-	Cursor,
-	useBlurOnFulfill,
-	useClearByFocusCell,
-} from 'react-native-confirmation-code-field';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Custom Hook: Countdown Timer
+const useOtpCountdown = (email: string, context: string, start: boolean) => {
+	const [resendLeft, setResendLeft] = useState(0);
+	const [isCountdownActive, setIsCountdownActive] = useState(false);
+	const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+	const storageKeys = useMemo(
+		() => ({
+			countdownKey: `otp_countdown_${email}_${context}`,
+			timestampKey: `otp_timestamp_${email}_${context}`,
+		}),
+		[email, context]
+	);
+
+	const clearTimer = useCallback(() => {
+		if (timerRef.current) {
+			clearInterval(timerRef.current);
+			timerRef.current = null;
+		}
+	}, []);
+
+	const saveCountdown = useCallback(
+		async (count: number) => {
+			await AsyncStorage.multiSet([
+				[storageKeys.countdownKey, count.toString()],
+				[storageKeys.timestampKey, Date.now().toString()],
+			]);
+		},
+		[storageKeys]
+	);
+
+	const clearCountdown = useCallback(async () => {
+		await AsyncStorage.multiRemove([
+			storageKeys.countdownKey,
+			storageKeys.timestampKey,
+		]);
+	}, [storageKeys]);
+
+	const startCountdown = useCallback(
+		async (initialCount: number = RESEND_COOLDOWN) => {
+			clearTimer();
+			setResendLeft(initialCount);
+			setIsCountdownActive(true);
+			await saveCountdown(initialCount);
+
+			timerRef.current = setInterval(async () => {
+				setResendLeft((prev) => {
+					const newCount = prev - 1;
+					if (newCount <= 0) {
+						clearTimer();
+						setIsCountdownActive(false);
+						clearCountdown();
+						return 0;
+					}
+					if (newCount % 10 === 0) saveCountdown(newCount);
+					return newCount;
+				});
+			}, 1000);
+		},
+		[clearTimer, saveCountdown, clearCountdown]
+	);
+
+	const loadCountdown = useCallback(async () => {
+		try {
+			const [savedCountdown, savedTimestamp] = await Promise.all([
+				AsyncStorage.getItem(storageKeys.countdownKey),
+				AsyncStorage.getItem(storageKeys.timestampKey),
+			]);
+			if (savedCountdown && savedTimestamp) {
+				const elapsed = Math.floor(
+					(Date.now() - parseInt(savedTimestamp)) / 1000
+				);
+				const remaining = parseInt(savedCountdown) - elapsed;
+				if (remaining > 0) {
+					setResendLeft(remaining);
+					setIsCountdownActive(true);
+					return remaining;
+				} else {
+					await clearCountdown();
+				}
+			}
+		} catch (err) {
+			console.error('Countdown load error:', err);
+		}
+		return 0;
+	}, [storageKeys, clearCountdown]);
+
+	useEffect(() => {
+		if (start) {
+			startCountdown(RESEND_COOLDOWN);
+		} else {
+			loadCountdown().then((remain) => {
+				if (remain > 0) startCountdown(remain);
+			});
+		}
+
+		return () => clearTimer();
+	}, [start, startCountdown, loadCountdown, clearTimer]);
+
+	return { resendLeft, isCountdownActive, startCountdown };
+};
+
+// Sub-component: Resend Timer
+const ResendOtpTimer: React.FC<{
+	resendLeft: number;
+	isCountdownActive: boolean;
+	canResend: boolean;
+	onResend: () => void;
+	loading: boolean;
+}> = ({ resendLeft, isCountdownActive, canResend, onResend, loading }) => {
+	const formatTime = (total: number) =>
+		`${String(Math.floor(total / 60)).padStart(2, '0')}:${String(
+			total % 60
+		).padStart(2, '0')}`;
+
+	return (
+		<View className="flex-row justify-center items-center mt-2">
+			{isCountdownActive && resendLeft > 0 ? (
+				<Text className="text-body-sm text-gray-500">
+					Resend in{' '}
+					<Text className="font-nexa-extrabold text-link">
+						{formatTime(resendLeft)}
+					</Text>
+				</Text>
+			) : (
+				<View className="flex flex-row items-center h-[40px]">
+					<Text className="text-body-sm">Didn&apos;t receive the code? </Text>
+					{loading ? (
+						<LottieLoader
+							animation={animations.spinner}
+							color={COLORS.light.pallete[500]}
+						/>
+					) : (
+						<Text
+							className={`font-nexa-extrabold ${
+								canResend ? 'text-link' : 'text-gray-400'
+							}`}
+							onPress={canResend ? onResend : undefined}
+						>
+							Resend
+						</Text>
+					)}
+				</View>
+			)}
+		</View>
+	);
+};
+
+// Sub-component: OTP Cell
+const OtpCell: React.FC<{
+	symbol: string | null;
+	isFocused: boolean;
+	index: number;
+	getCellOnLayoutHandler: any;
+}> = ({ symbol, isFocused, index, getCellOnLayoutHandler }) => (
+	<View
+		key={index}
+		className={`w-[55px] h-[55px] justify-center items-center border-2 rounded-lg ${
+			isFocused
+				? 'border-light-accent dark:border-dark-accent'
+				: 'border-gray-300 dark:border-gray-600'
+		} mx-[6px]`}
+		onLayout={getCellOnLayoutHandler(index)}
+	>
+		<Text className="text-2xl font-nexa-extrabold text-light-pallete-950 dark:text-gray-50">
+			{symbol || (isFocused ? <Cursor /> : null)}
+		</Text>
+	</View>
+);
+
+// Main Component: VerifyOtp
 export default function VerifyOtp() {
 	const dispatch = useAppDispatch();
 	const router = useRouter();
 	const { isLoading, error, user, token, pendingEmail, resetVerified } =
 		useAppSelector((state: RootState) => state.auth);
-
-	// Get email and context from params
 	const {
 		email: emailFromParam,
 		context,
@@ -52,13 +224,11 @@ export default function VerifyOtp() {
 		startCountdown: string;
 	}>();
 
-	// Resolve email
+	// Derived values
 	const email = useMemo(
 		() => (emailFromParam as string) || pendingEmail || user?.email || '',
 		[emailFromParam, pendingEmail, user?.email]
 	);
-
-	// Normalize context to backend values
 	const apiContext = useMemo(() => {
 		const raw = (context as string) || 'signup';
 		if (raw === 'reset-password' || raw === 'password-reset')
@@ -67,162 +237,106 @@ export default function VerifyOtp() {
 		return 'signup';
 	}, [context]);
 
-	// OTP input state
+	// OTP input
 	const [value, setValue] = useState('');
 	const ref = useBlurOnFulfill({ value, cellCount: CELL_COUNT });
 	const [props, getCellOnLayoutHandler] = useClearByFocusCell({
 		value,
 		setValue,
 	});
-	const [startTimer, setStartTimer] = useState<boolean | null>(
-		startCountdown === 'true'
-	);
 
-	const [verifyLoading, setVerifyLoading] = useState(false);
-	const [resendLoading, setResendLoading] = useState(false);
-
-	// Resend cooldown state with persistent storage
-	const [resendLeft, setResendLeft] = useState(0);
-	const [isCountdownActive, setIsCountdownActive] = useState(false);
-	const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-	// Modal state
+	// Modal handling
 	const [modalData, setModalData] = useState<ModalProps | null>(null);
+	const openModal = useCallback((data: ModalProps) => setModalData(data), []);
 
-	// Storage keys for persisting countdown
-	const getStorageKeys = useCallback(
-		() => ({
-			countdownKey: `otp_countdown_${email}_${apiContext}`,
-			timestampKey: `otp_timestamp_${email}_${apiContext}`,
-		}),
-		[email, apiContext]
+	// Loading states
+	const [loading, setLoading] = useReducer(
+		(state: any, newState: any) => ({ ...state, ...newState }),
+		{ verify: false, resend: false }
 	);
 
-	// Clear timer utility
-	const clearTimer = useCallback(() => {
-		if (resendTimerRef.current) {
-			clearInterval(resendTimerRef.current);
-			resendTimerRef.current = null;
-		}
-	}, []);
+	// Countdown hook
+	const {
+		resendLeft,
+		isCountdownActive,
+		startCountdown: startResendCooldown,
+	} = useOtpCountdown(email, apiContext, startCountdown === 'true');
 
-	// Load persisted countdown state
-	const loadCountdownState = useCallback(async () => {
+	const canResend =
+		!isCountdownActive && !!email && !isLoading && !loading.resend;
+
+	// Verify OTP Handler
+	const handleVerify = async () => {
+		if (value.length !== CELL_COUNT) return;
+		setLoading({ verify: true });
+
 		try {
-			const { countdownKey, timestampKey } = getStorageKeys();
-			const [savedCountdown, savedTimestamp] = await Promise.all([
-				AsyncStorage.getItem(countdownKey),
-				AsyncStorage.getItem(timestampKey),
-			]);
-
-			if (savedCountdown && savedTimestamp) {
-				const lastTimestamp = parseInt(savedTimestamp);
-				const currentTime = Date.now();
-				const elapsedSeconds = Math.floor((currentTime - lastTimestamp) / 1000);
-				const remainingTime = parseInt(savedCountdown) - elapsedSeconds;
-
-				if (remainingTime > 0) {
-					setResendLeft(remainingTime);
-					setIsCountdownActive(true);
-					return remainingTime;
-				} else {
-					await AsyncStorage.multiRemove([countdownKey, timestampKey]);
+			if (apiContext === 'change-email') {
+				const response = await verifyEmailChange(email, value);
+				if (response.success) {
+					openModal({
+						visible: true,
+						title: 'Email Updated',
+						description: 'Your email has been successfully updated.',
+						icon: (
+							<Ionicons name="checkmark-circle" size={70} color="#22C55E" />
+						),
+						primaryButton: {
+							label: 'OK',
+							onPress: () => {
+								setModalData(null);
+								router.back();
+							},
+							className: 'bg-green-500',
+							textClassName: 'text-white',
+						},
+					});
+					dispatch(updateUser(response.user!));
 				}
-			}
-		} catch (error) {
-			console.error('Error loading countdown state:', error);
-		}
-		return 0;
-	}, [getStorageKeys]);
-
-	// Save countdown state
-	const saveCountdownState = useCallback(
-		async (countdown: number) => {
-			try {
-				const { countdownKey, timestampKey } = getStorageKeys();
-				await AsyncStorage.multiSet([
-					[countdownKey, countdown.toString()],
-					[timestampKey, Date.now().toString()],
-				]);
-			} catch (error) {
-				console.error('Error saving countdown state:', error);
-			}
-		},
-		[getStorageKeys]
-	);
-
-	// Clear countdown state
-	const clearCountdownState = useCallback(async () => {
-		try {
-			const { countdownKey, timestampKey } = getStorageKeys();
-			await AsyncStorage.multiRemove([countdownKey, timestampKey]);
-		} catch (error) {
-			console.error('Error clearing countdown state:', error);
-		}
-	}, [getStorageKeys]);
-
-	// Start resend cooldown
-	const startResendCooldown = useCallback(
-		async (initialCount = RESEND_COOLDOWN) => {
-			clearTimer();
-			setResendLeft(initialCount);
-			setIsCountdownActive(true);
-			await saveCountdownState(initialCount);
-
-			resendTimerRef.current = setInterval(async () => {
-				setResendLeft((prev) => {
-					const newCount = prev - 1;
-					if (newCount <= 0) {
-						clearTimer();
-						setIsCountdownActive(false);
-						clearCountdownState();
-						return 0;
-					}
-					if (newCount % 10 === 0) {
-						saveCountdownState(newCount);
-					}
-					return newCount;
-				});
-			}, 1000);
-		},
-		[clearTimer, saveCountdownState, clearCountdownState]
-	);
-
-	// load existing countdown
-	useEffect(() => {
-		const initializeCountdown = async () => {
-			if (context === 'signup' && startTimer) {
-				setStartTimer(false);
-				await startResendCooldown(RESEND_COOLDOWN);
 			} else {
-				const remainingTime = await loadCountdownState();
-				if (remainingTime > 0) {
-					startResendCooldown(remainingTime);
-				}
+				await dispatch(verifyOTP({ email, otp: value, context: apiContext }));
 			}
-		};
+		} catch (err: any) {
+			console.error('OTP verify error:', err.response?.data || err.message);
+		} finally {
+			setLoading({ verify: false });
+		}
+	};
 
-		initializeCountdown();
+	// Resend OTP Handler
+	const resendOTP = useCallback(async () => {
+		if (!email || !canResend) return;
+		setLoading({ resend: true });
 
-		return () => {
-			clearTimer();
-			if (error) dispatch(clearError());
-		};
-	}, [
-		loadCountdownState,
-		startResendCooldown,
-		clearTimer,
-		dispatch,
-		error,
-		context,
-		emailFromParam,
-		startTimer,
-	]);
+		try {
+			const action = await dispatch(sendOTP({ email, context: apiContext }));
+			if (sendOTP.fulfilled.match(action)) {
+				setValue('');
+				openModal({
+					visible: true,
+					title: 'OTP Sent!',
+					description: `A new verification code has been sent to ${email}`,
+					icon: <Ionicons name="mail" size={70} color="#22C55E" />,
+					primaryButton: {
+						label: 'OK',
+						onPress: () => setModalData(null),
+						className: 'bg-green-500',
+						textClassName: 'text-white',
+					},
+				});
+				startResendCooldown();
+			}
+		} catch (err) {
+			console.error('Resend OTP error:', err);
+		} finally {
+			setLoading({ resend: false });
+		}
+	}, [dispatch, email, canResend, apiContext, startResendCooldown, openModal]);
 
-	// Show success modal
+	// Modal effects for signup/password-reset
 	useEffect(() => {
 		if (token && apiContext === 'signup') {
-			setModalData({
+			openModal({
 				visible: true,
 				title: 'Verified!',
 				description: 'Welcome aboard. You can now enjoy all features.',
@@ -238,7 +352,7 @@ export default function VerifyOtp() {
 				},
 			});
 		} else if (resetVerified && apiContext === 'password-reset') {
-			setModalData({
+			openModal({
 				visible: true,
 				title: 'Verification Successful!',
 				description: 'You can now reset your password.',
@@ -257,176 +371,21 @@ export default function VerifyOtp() {
 				},
 			});
 		}
-	}, [token, resetVerified, apiContext, router, email]);
+	}, [token, resetVerified, apiContext, router, email, openModal]);
 
-	// Verify OTP handler
-	// const handleVerify = useCallback(async () => {
-	// 	console.log(apiContext);
+	// Theme
+	const { colorScheme } = useColorScheme();
+	const isDark = colorScheme === 'dark';
 
-	// 	if (value.length !== CELL_COUNT) return;
-	// 	setVerifyLoading(true);
-
-	// 	try {
-	// 		const action = await dispatch(
-	// 			verifyOTP({ email, otp: value, context: apiContext })
-	// 		);
-
-	// 		if (verifyOTP.fulfilled.match(action)) {
-	// 			const { user } = action.payload;
-
-	// 			if (apiContext === 'change-email') {
-	// 				if (user) {
-	// 					dispatch(updateUser(user));
-	// 				}
-	// 				setModalData({
-	// 					visible: true,
-	// 					title: 'Email Updated',
-	// 					description: 'Your email has been successfully updated.',
-	// 					icon: (
-	// 						<Ionicons name="checkmark-circle" size={70} color="#22C55E" />
-	// 					),
-	// 					primaryButton: {
-	// 						label: 'OK',
-	// 						onPress: () => {
-	// 							setModalData(null);
-	// 							router.back();
-	// 						},
-	// 						className: 'bg-green-500',
-	// 						textClassName: 'text-white',
-	// 					},
-	// 				});
-	// 			}
-	// 			// signup and reset flows handled via useEffect
-	// 		}
-	// 	} catch (err) {
-	// 		console.error('Verification error: ', err);
-	// 	} finally {
-	// 		setVerifyLoading(false);
-	// 	}
-	// }, [value, email, apiContext, dispatch, router]);
-
-	const handleVerify = async () => {
-		if (value.length !== CELL_COUNT) return;
-		setVerifyLoading(true);
-
-		try {
-			if (apiContext === 'change-email') {
-				const response = await verifyEmailChange(email, value);
-
-				if (response.success) {
-					// update UI with modal
-					setModalData({
-						visible: true,
-						title: 'Email Updated',
-						description: 'Your email has been successfully updated.',
-						icon: (
-							<Ionicons name="checkmark-circle" size={70} color="#22C55E" />
-						),
-						primaryButton: {
-							label: 'OK',
-							onPress: () => {
-								setModalData(null);
-								router.back();
-							},
-							className: 'bg-green-500',
-							textClassName: 'text-white',
-						},
-					});
-
-					// update user
-					dispatch(updateUser(response.user!));
-				}
-			} else {
-				// existing signup / password-reset flow (redux thunk)
-				await dispatch(verifyOTP({ email, otp: value, context: apiContext }));
-			}
-		} catch (err: any) {
-			console.error(
-				'Email change verify error:',
-				err.response?.data || err.message
-			);
-		} finally {
-			setVerifyLoading(false);
-		}
-	};
-
-	const canResend =
-		!isCountdownActive && !!email && !isLoading && !resendLoading;
-
-	// Resend OTP handler
-	const resendOTP = useCallback(async () => {
-		if (!email || !canResend) return;
-		setResendLoading(true);
-
-		try {
-			const action = await dispatch(sendOTP({ email, context: apiContext }));
-			if (sendOTP.fulfilled.match(action)) {
-				setValue('');
-				setModalData({
-					visible: true,
-					title: 'OTP Sent!',
-					description: `A new verification code has been sent to ${email}`,
-					icon: <Ionicons name="mail" size={70} color="#22C55E" />,
-					primaryButton: {
-						label: 'OK',
-						onPress: () => setModalData(null),
-						className: 'bg-green-500',
-						textClassName: 'text-white',
-					},
-				});
-				startResendCooldown();
-			}
-		} catch (error) {
-			console.error('Resend OTP error:', error);
-		} finally {
-			setResendLoading(false);
-		}
-	}, [dispatch, email, canResend, startResendCooldown, apiContext]);
-
-	const formatTime = useCallback((total: number) => {
-		const mm = Math.floor(total / 60)
-			.toString()
-			.padStart(2, '0');
-		const ss = (total % 60).toString().padStart(2, '0');
-		return `${mm}:${ss}`;
-	}, []);
-
-	const getVerifyButtonLabel = () => {
-		switch (apiContext) {
-			case 'signup':
-				return verifyLoading ? 'Verifying...' : 'Verify & Continue';
-			case 'change-email':
-				return verifyLoading ? 'Verifying...' : 'Verify Email';
-			case 'password-reset':
-				return verifyLoading ? 'Verifying...' : 'Verify & Reset';
-			default:
-				return verifyLoading ? 'Verifying...' : 'Verify';
-		}
-	};
-
+	// Render OTP Cell
 	const renderCellContent = useCallback(
-		({
-			index,
-			symbol,
-			isFocused,
-		}: {
-			index: number;
-			symbol: string | null;
-			isFocused: boolean;
-		}) => (
-			<View
-				key={index}
-				className={`w-[55px] h-[55px] justify-center items-center border-2 rounded-lg ${
-					isFocused
-						? 'border-light-accent dark:border-dark-accent'
-						: 'border-gray-300 dark:border-gray-600'
-				} mx-[6px]`}
-				onLayout={getCellOnLayoutHandler(index)}
-			>
-				<Text className="text-2xl font-nexa-extrabold text-light-pallete-950 dark:text-gray-50">
-					{symbol || (isFocused ? <Cursor /> : null)}
-				</Text>
-			</View>
+		({ index, symbol, isFocused }: any) => (
+			<OtpCell
+				index={index}
+				symbol={symbol}
+				isFocused={isFocused}
+				getCellOnLayoutHandler={getCellOnLayoutHandler}
+			/>
 		),
 		[getCellOnLayoutHandler]
 	);
@@ -441,14 +400,19 @@ export default function VerifyOtp() {
 				showsVerticalScrollIndicator={false}
 			>
 				<View className="main-container">
-					<View className="flex justify-center items-center mb-8 border border-light-pallete-500 px-3 py-2 rounded-[10px]">
-						<Ionicons name="mail-outline" size={50} color="#4d7111" />
+					<View className="flex justify-center items-center mb-8 border-2 border-light-pallete-500 px-3 py-2 rounded-[10px]">
+						<Ionicons
+							name="mail-outline"
+							size={50}
+							color={
+								isDark ? COLORS.light.pallete[400] : COLORS.light.pallete[500]
+							}
+						/>
 					</View>
 
 					<Text className="text-3xl font-nexa-heavy mb-4 text-light-pallete-950 dark:text-white">
 						Verify Your Email
 					</Text>
-
 					<Text className="text-sm font-nexa leading-5 text-center max-w-[80%] mb-4 text-gray-500 dark:text-white">
 						Enter the {CELL_COUNT}-digit verification code we sent to{' '}
 						<Text className="font-nexa-extrabold">{email || 'your email'}</Text>
@@ -466,37 +430,13 @@ export default function VerifyOtp() {
 						renderCell={renderCellContent}
 					/>
 
-					<View className="flex-row justify-center items-center mt-2">
-						{isCountdownActive && resendLeft > 0 ? (
-							<Text className="text-body-sm text-gray-500">
-								Resend in{' '}
-								<Text className="font-nexa-extrabold text-link">
-									{formatTime(resendLeft)}
-								</Text>
-							</Text>
-						) : (
-							<View className="flex flex-row items-center h-[40px]">
-								<Text className="text-body-sm">
-									Didn&apos;t receive the code?{' '}
-								</Text>
-								{resendLoading ? (
-									<LottieLoader
-										animation={animations.spinner}
-										color={COLORS.light.pallete[500]}
-									/>
-								) : (
-									<Text
-										className={`font-nexa-extrabold ${
-											canResend ? 'text-link' : 'text-gray-400'
-										}`}
-										onPress={canResend ? resendOTP : undefined}
-									>
-										Resend
-									</Text>
-								)}
-							</View>
-						)}
-					</View>
+					<ResendOtpTimer
+						resendLeft={resendLeft}
+						isCountdownActive={isCountdownActive}
+						canResend={canResend}
+						onResend={resendOTP}
+						loading={loading.resend}
+					/>
 
 					{error && (
 						<Alert
@@ -511,12 +451,20 @@ export default function VerifyOtp() {
 
 				<View className="w-full px-4 mb-6 mt-12">
 					<CustomButton
-						label={getVerifyButtonLabel()}
-						accessibilityLabel={getVerifyButtonLabel()}
+						label={
+							loading.verify
+								? 'Verifying...'
+								: apiContext === 'signup'
+								? 'Verify & Continue'
+								: apiContext === 'change-email'
+								? 'Verify Email'
+								: 'Verify'
+						}
+						accessibilityLabel="Verify OTP"
 						accessibilityRole="button"
 						onPress={handleVerify}
-						disabled={verifyLoading || value.length !== CELL_COUNT}
-						loading={verifyLoading}
+						disabled={loading.verify || value.length !== CELL_COUNT}
+						loading={loading.verify}
 					/>
 				</View>
 			</KeyboardAwareScrollView>

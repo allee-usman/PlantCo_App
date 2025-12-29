@@ -41,7 +41,7 @@ export const fetchCart = createAsyncThunk<
 >('cart/fetchCart', async (_, { rejectWithValue }) => {
 	try {
 		// CHANGED: use api instead of axios
-		const { data } = await api.get(`${BASE_URI}/cart`);
+		const { data } = await api.get(`${BASE_URI}/customers/cart`);
 		// CHANGED: normalize each item returned by server to include `id`
 		const items = (data.data.items || []).map((i: any) =>
 			normalizeItemFromServer(i)
@@ -66,7 +66,7 @@ export const addToCart = createAsyncThunk<
 	async ({ productId, quantity = 1 }, { rejectWithValue }) => {
 		try {
 			// CHANGED: use api instead of axios
-			const { data } = await api.post(`${BASE_URI}/cart/add`, {
+			const { data } = await api.post(`${BASE_URI}/customers/cart`, {
 				productId,
 				quantity,
 			});
@@ -92,9 +92,12 @@ export const updateCartItem = createAsyncThunk<
 	async ({ productId, quantity }, { rejectWithValue }) => {
 		try {
 			// CHANGED: use api instead of axios
-			const { data } = await api.put(`${BASE_URI}/cart/update/${productId}`, {
-				quantity,
-			});
+			const { data } = await api.put(
+				`${BASE_URI}/customers/cart/${productId}`,
+				{
+					quantity,
+				}
+			);
 			// CHANGED: server responds with data.quantity (and data.item). We'll return productId + quantity
 			return { productId, quantity: data.quantity ?? quantity };
 		} catch (error: any) {
@@ -112,8 +115,7 @@ export const removeFromCart = createAsyncThunk<
 	{ rejectValue: string }
 >('cart/removeFromCart', async (productId, { rejectWithValue }) => {
 	try {
-		// CHANGED: use api instead of axios
-		await api.delete(`${BASE_URI}/cart/remove/${productId}`);
+		await api.delete(`${BASE_URI}/customers/cart/${productId}`);
 		return productId;
 	} catch (error: any) {
 		return rejectWithValue(
@@ -127,7 +129,7 @@ export const clearCart = createAsyncThunk<void, void, { rejectValue: string }>(
 	async (_, { rejectWithValue }) => {
 		try {
 			// CHANGED: use api instead of axios
-			await api.delete(`${BASE_URI}/cart/clear`);
+			await api.delete(`${BASE_URI}/customers/cart/clear`);
 		} catch (error: any) {
 			return rejectWithValue(
 				error.response?.data?.message || 'Failed to clear cart'

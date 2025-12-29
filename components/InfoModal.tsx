@@ -35,7 +35,7 @@ const InfoModal: React.FC<InfoModalProps> = ({
 			onRequestClose={onClose}
 		>
 			<View className="flex-1 justify-center items-center bg-black/40">
-				<View className="bg-white dark:bg-gray-700 p-6 pb-3 rounded-2xl w-[85%] items-center">
+				<View className="bg-white dark:bg-gray-900 p-6 pb-3 rounded-2xl w-[85%] items-center">
 					<Ionicons name={icon} size={60} color={iconColor ?? color} />
 					<Text className="text-xl font-nexa-heavy text-gray-900 dark:text-white  text-center mt-3 mb-2">
 						{title}

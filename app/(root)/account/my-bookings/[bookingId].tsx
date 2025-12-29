@@ -35,7 +35,7 @@ const BookingDetailsScreen: React.FC = () => {
 			setLoading(true);
 			try {
 				const res = await bookingService.getBookingById(bookingId);
-				console.log('API response: ', res.data);
+				// console.log('API response: ', res.data);
 
 				setBooking(res.data);
 			} catch (err: unknown) {
@@ -135,7 +135,7 @@ const BookingDetailsScreen: React.FC = () => {
 			<ScrollView showsVerticalScrollIndicator={false}>
 				<View className="pt-4 bg-light-screen dark:bg-gray-950">
 					<Text className="text-body-sm font-nexa-extrabold px-4 mb-2 text-gray-900 dark:text-white ">
-						Service Details
+						Booking Summary
 					</Text>
 
 					<BookingInfoCard booking={booking} />

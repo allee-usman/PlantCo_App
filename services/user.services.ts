@@ -86,7 +86,7 @@ export const getNotificationSettings =
 	async (): Promise<NotificationSettings> => {
 		const { data } = await api.get<{
 			settings: NotificationSettings;
-		}>('/users/settings/notifications');
+		}>('/users/me/notifications');
 		return data.settings;
 	};
 
@@ -97,6 +97,6 @@ export const updateNotificationSettings = async (
 	success: boolean;
 	settings: NotificationSettings;
 }> => {
-	const { data } = await api.put('/users/settings/notifications', newSettings);
+	const { data } = await api.put('/users/me/notifications', newSettings);
 	return data.settings;
 };

@@ -118,30 +118,31 @@ export default function Onboarding() {
 				<Text className="text-body leading-6 text-justify mx-3">
 					{item.description}
 				</Text>
+
+				{/* Skip Button */}
+				<TouchableOpacity
+					className="justify-center items-center w-full absolute bottom-6"
+					accessibilityLabel="Skip onboarding"
+					accessibilityRole="button"
+					onPress={async () => {
+						await saveSecureItem('hasSeenWelcome', 'true');
+						router.replace('/(auth)/signup');
+					}}
+				>
+					<Text className="text-body-sm tracking-widest font-nexa-bold">
+						Skip
+					</Text>
+				</TouchableOpacity>
 			</View>
 		);
 	});
 
 	return (
 		<SafeAreaView className="bg-light-screen dark:bg-gray-950 h-full w-full flex justify-between items-center py-5">
-			{/* Skip Button */}
 			<StatusBar
 				backgroundColor="transparent"
 				barStyle={isDark ? 'light-content' : 'dark-content'}
 			/>
-			<TouchableOpacity
-				className="justify-center items-end w-full pr-5"
-				accessibilityLabel="Skip onboarding"
-				accessibilityRole="button"
-				onPress={async () => {
-					await saveSecureItem('hasSeenWelcome', 'true');
-					router.replace('/(auth)/signup');
-				}}
-			>
-				<Text className="text-body-sm tracking-widest font-nexa-bold">
-					Skip
-				</Text>
-			</TouchableOpacity>
 
 			{/* Swiper */}
 			<SwiperFlatList
@@ -160,7 +161,7 @@ export default function Onboarding() {
 							borderRadius: 999,
 							alignSelf: 'center',
 							position: 'absolute',
-							bottom: '15%',
+							bottom: '18.5%',
 						}}
 					>
 						{Array.from({ length: size }).map((_, i) => (

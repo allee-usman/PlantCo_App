@@ -3,7 +3,11 @@
 import { COLORS } from '@/constants/colors';
 import { icons } from '@/constants/icons';
 import { IBooking } from '@/types/booking.types';
-import { formatDateTime, getFinishTime } from '@/utils/formatDate';
+import {
+	formatDateTime,
+	formatDuration,
+	getFinishTime,
+} from '@/utils/formatDate';
 import React from 'react';
 import { Image, Text, View } from 'react-native';
 
@@ -37,7 +41,7 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 	return (
 		<View className="bg-light-surface dark:bg-gray-800 rounded-xl p-4 mx-4 mb-4 ">
 			{/* Header with status */}
-			<View className="flex-row h-[80px] items-center justify-between mb-4">
+			<View className="flex-row h-[80px] items-center justify-between mb-4 overflow-hidden">
 				<View className="flex-row items-center gap-x-3">
 					{/* Service Image */}
 					<View className="w-[80px] h-[80px] rounded-xl bg-gray-300 dark:bg-gray-800">
@@ -52,7 +56,10 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 					{/* Service Basic Details */}
 					<View className="justify-between p-1 h-full">
 						{/* Service Name */}
-						<Text className="text-body font-nexa-extrabold text-gray-900 dark:text-white">
+						<Text
+							className="text-body font-nexa-extrabold text-gray-900 dark:text-white"
+							numberOfLines={2}
+						>
 							{booking.service.title}
 						</Text>
 						{/* Booking ID */}
@@ -63,39 +70,51 @@ const BookingInfoCard: React.FC<BookingInfoCardProps> = ({ booking }) => {
 						</Text>
 						{/* Service Rate */}
 						<Text className="font-nexa-extrabold text-gray-950 dark:text-white text-body-sm">
-							Rs. {booking.service.hourlyRate}/hr
+							Rs. {booking.service.hourlyRate}
 						</Text>
 					</View>
 				</View>
 			</View>
 
 			{/* meta data */}
-			<View className="bg-light-screen/80 dark:bg-gray-900 rounded-xl px-3">
+			<View className="bg-gray-50 dark:bg-gray-900 rounded-xl px-3">
+				{/* Booking time */}
+				<View className="py-3 border-b border-dashed border-gray-200 dark:border-gray-800 flex-row justify-between">
+					<Text className="font-nexa text-body-xs text-gray-950 dark:text-white">
+						Booked at
+					</Text>
+					<Text className="font-nexa-bold text-body-xs text-gray-950 dark:text-white">
+						{formatDateTime(booking.createdAt as string)}
+					</Text>
+				</View>
+
 				{/* Start time */}
 				<View className="py-3 border-b border-dashed border-gray-200 dark:border-gray-800 flex-row justify-between">
 					<Text className="font-nexa text-body-xs text-gray-950 dark:text-white">
-						Started At
+						{booking.status === 'completed' ? 'Started At' : 'Schedule'}
 					</Text>
 					<Text className="font-nexa-bold text-body-xs text-gray-950 dark:text-white">
 						{formatDateTime(booking.scheduledTime as string)}
 					</Text>
 				</View>
 				{/* finish time */}
-				<View className="py-3 border-b border-dashed border-gray-200 dark:border-gray-800 flex-row justify-between">
-					<Text className="font-nexa text-body-xs text-gray-950 dark:text-white">
-						Finished At
-					</Text>
-					<Text className="font-nexa-bold text-body-xs text-gray-950 dark:text-white">
-						{finishTime}
-					</Text>
-				</View>
+				{booking.status === 'completed' && (
+					<View className="py-3 border-b border-dashed border-gray-200 dark:border-gray-800 flex-row justify-between">
+						<Text className="font-nexa text-body-xs text-gray-950 dark:text-white">
+							Finished At
+						</Text>
+						<Text className="font-nexa-bold text-body-xs text-gray-950 dark:text-white">
+							{finishTime}
+						</Text>
+					</View>
+				)}
 				{/* Duration */}
 				<View className="py-3 border-b border-dashed border-gray-200 dark:border-gray-800 flex-row justify-between">
 					<Text className="font-nexa text-body-xs text-gray-950 dark:text-white">
 						Duration
 					</Text>
 					<Text className="font-nexa-bold text-body-xs text-gray-950 dark:text-white">
-						{booking.duration} hours
+						{formatDuration(booking.totalServiceDuration!)}
 					</Text>
 				</View>
 				{/* Status */}

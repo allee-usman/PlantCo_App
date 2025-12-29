@@ -44,6 +44,7 @@ export interface IAdditionalService {
 	title: string;
 	price: number;
 	durationHours: number;
+	image?: { url: string; alt?: string };
 }
 
 // PRICE BREAKDOWN

@@ -140,7 +140,7 @@ const CustomInputField = forwardRef<TextInput, InputFieldProps>(
 		const getRightIcon = () =>
 			secureTextEntry ? (showPassword ? icons.eyecross : icons.eye) : rightIcon;
 
-		const shouldShowRightIcon = secureTextEntry || rightIcon;
+		const showRightIcon = secureTextEntry || rightIcon;
 
 		return (
 			<View style={[{ marginBottom: 16 }, containerStyle]}>
@@ -165,7 +165,7 @@ const CustomInputField = forwardRef<TextInput, InputFieldProps>(
 							? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
 							: isActuallyFocused
 							? 'bg-light-pallete-50/50 dark:bg-light-pallete-900/20 border-light-pallete-500  dark:border-light-pallete-600'
-							: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600'
+							: 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
 					}`}
 					style={{
 						height: multiline ? undefined : currentSize.height,
@@ -176,7 +176,7 @@ const CustomInputField = forwardRef<TextInput, InputFieldProps>(
 					{/* Left Icon */}
 					{leftIcon && (
 						<View
-							style={{ paddingLeft: roundedFull ? 12 : 8 }}
+							style={{ paddingLeft: roundedFull ? 12 : 8, paddingRight: 8 }}
 							pointerEvents="none"
 						>
 							<Image
@@ -236,7 +236,7 @@ const CustomInputField = forwardRef<TextInput, InputFieldProps>(
 					/>
 
 					{/* Right Icon */}
-					{shouldShowRightIcon && (
+					{showRightIcon && (
 						<TouchableOpacity
 							style={{ paddingHorizontal: 10 }}
 							onPress={handleRightIconPress}
@@ -249,11 +249,6 @@ const CustomInputField = forwardRef<TextInput, InputFieldProps>(
 									: 'Right icon button'
 							}
 						>
-							{/* <Ionicons
-								name={getRightIcon() as any}
-								size={currentSize.iconSize}
-								color={getIconColor()}
-							/> */}
 							<Image
 								source={getRightIcon()}
 								className="w-6 h-6"

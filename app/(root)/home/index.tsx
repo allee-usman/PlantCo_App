@@ -1,12 +1,10 @@
 import HomeHeader from '@/components/HomeHeader';
 import { PlantsTab } from '@/components/PlantsTab';
-import { ServicesTab } from '@/components/ServicesTab';
 import {
 	HEADER_MAX_HEIGHT,
 	HEADER_MIN_HEIGHT,
 	HEADER_SCROLL_DISTANCE,
 } from '@/constants/constant';
-import { useTabData } from '@/hooks/useTabData';
 import { useColorScheme } from 'nativewind';
 import React, { useRef } from 'react';
 import { Animated, StatusBar, View } from 'react-native';
@@ -16,7 +14,6 @@ const HomeScreen = () => {
 	const scrollY = useRef(new Animated.Value(0)).current;
 	const { colorScheme } = useColorScheme();
 	const isDark = colorScheme === 'dark';
-	const { activeTabId, handleTabPress } = useTabData();
 
 	const headerHeight = scrollY.interpolate({
 		inputRange: [0, HEADER_SCROLL_DISTANCE],
@@ -44,19 +41,13 @@ const HomeScreen = () => {
 			<HomeHeader
 				scrollY={scrollY}
 				isDark={isDark}
-				activeTabId={activeTabId}
-				onTabPress={handleTabPress}
 				headerHeight={headerHeight}
 				headerShadowOpacity={headerShadowOpacity}
 				variant="greeting"
 			/>
 
 			<View>
-				{activeTabId === 'products' ? (
-					<PlantsTab scrollY={scrollY} />
-				) : (
-					<ServicesTab scrollY={scrollY} />
-				)}
+				<PlantsTab scrollY={scrollY} />
 			</View>
 		</SafeAreaView>
 	);

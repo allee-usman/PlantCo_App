@@ -222,7 +222,7 @@ const Profile: React.FC = () => {
 				type,
 			} as any); // RN requires `as any`
 
-			const { data } = await api.put('/users/profile/avatar', form, {
+			const { data } = await api.put('/users/me/avatar', form, {
 				headers: { 'Content-Type': 'multipart/form-data' },
 			});
 

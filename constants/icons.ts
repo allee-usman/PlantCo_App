@@ -3,6 +3,7 @@ import legal from '@/assets/icons/agreement.png';
 import apple from '@/assets/icons/apple.png';
 import verifiedBadge from '@/assets/icons/approve.png';
 import arrowDown from '@/assets/icons/arrow-down.png';
+import arrowBack from '@/assets/icons/back.png';
 import bagOutline from '@/assets/icons/bag-outline.png';
 import bag from '@/assets/icons/bag.png';
 import basketOutline from '@/assets/icons/basket-outline.png';
@@ -93,6 +94,7 @@ import wishlist from '@/assets/icons/wishlist.png';
 
 export const icons = {
 	thankyou,
+	arrowBack,
 	add,
 	bookmark,
 	bookmarkFilled,

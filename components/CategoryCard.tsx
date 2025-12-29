@@ -96,7 +96,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 						elevation: showShadow ? 2 : 0,
 					},
 				]}
-				className="items-center justify-center p-1.5 flex-row gap-x-2 rounded-full bg-light-surface pr-3"
+				className="items-center justify-center p-1.5 flex-row gap-x-2 rounded-full bg-light-surface dark:bg-gray-900 pr-3 dark:border border-gray-800"
 			>
 				{/* Icon Container */}
 				<View className="w-[40px] h-[40px] items-center justify-center rounded-full bg-white dark:bg-gray-800">

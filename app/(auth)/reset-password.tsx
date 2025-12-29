@@ -1,3 +1,9 @@
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useRef, useState } from 'react';
+import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import CustomButton from '@/components/CustomButton';
 import CustomInputField from '@/components/CustomInputField';
 import InfoModal from '@/components/InfoModal';
@@ -6,96 +12,122 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { clearError, resetPassword } from '@/redux/slices/authSlice';
 import { RootState } from '@/redux/store';
 import { validateConfirmPassword, validatePassword } from '@/utils/validations';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ResetPassword = () => {
-	const [modalVisible, setModalVisible] = useState(false);
-	const { isLoading, error } = useAppSelector((state: RootState) => state.auth);
 	const dispatch = useAppDispatch();
-	const [formData, setFormData] = useState<{
-		password: string;
-		confirmPassword: string;
-	}>({
+	const { isLoading, error } = useAppSelector((state: RootState) => state.auth);
+
+	// Modal visibility state
+	const [isModalVisible, setIsModalVisible] = useState(false);
+
+	// Form data state
+	const [formValues, setFormValues] = useState({
 		password: '',
 		confirmPassword: '',
 	});
-	const [focusedField, setFocusedField] = useState<string | null>(null);
-	// refs for chaining focus
-	const passwordRef = useRef<TextInput>(null);
-	const confirmPasswordRef = useRef<TextInput>(null);
 
+	// Focus tracking for inputs
+	const [focusedField, setFocusedField] = useState<
+		'password' | 'confirmPassword' | null
+	>(null);
+
+	// Input refs for chaining focus
+	const passwordInputRef = useRef<TextInput>(null);
+	const confirmPasswordInputRef = useRef<TextInput>(null);
+
+	// Validation error state
 	const [passwordError, setPasswordError] = useState<string | null>(null);
 	const [confirmPasswordError, setConfirmPasswordError] = useState<
 		string | null
 	>(null);
 
-	// Get email and context from params
-	const { email } = useLocalSearchParams<{
-		email?: string;
-	}>();
+	// Get email from route params
+	const { email } = useLocalSearchParams<{ email?: string }>();
 
-	const handlePasswordBlur = () => {
-		setFocusedField(null);
-		if (formData.password) {
-			const error = validatePassword(formData.password);
-			setPasswordError(error);
+	/**
+	 * Handles updating form values and performs live validation if error exists.
+	 */
+	const handleInputChange = (
+		field: 'password' | 'confirmPassword',
+		value: string
+	) => {
+		setFormValues((prev) => ({ ...prev, [field]: value }));
+
+		// Live validation
+		if (field === 'password' && passwordError) {
+			setPasswordError(validatePassword(value));
 		}
-	};
-	const handleConfirmPasswordBlur = () => {
-		setFocusedField(null);
-		if (formData.confirmPassword) {
-			const error = validateConfirmPassword(
-				formData.password,
-				formData.confirmPassword
+		if (field === 'confirmPassword' && confirmPasswordError) {
+			setConfirmPasswordError(
+				validateConfirmPassword(formValues.password, value)
 			);
-			setConfirmPasswordError(error);
 		}
 	};
 
-	const handleResetPassword = async () => {
-		console.log('handleResetPassword triggered');
+	/**
+	 * Handles input focus: clears global error and sets focused field.
+	 */
+	const handleInputFocus = (field: 'password' | 'confirmPassword') => {
+		if (error) dispatch(clearError());
+		setFocusedField(field);
+	};
 
+	/**
+	 * Handles input blur: clears focused field and validates input.
+	 */
+	const handleInputBlur = (field: 'password' | 'confirmPassword') => {
+		setFocusedField(null);
+		if (field === 'password')
+			setPasswordError(validatePassword(formValues.password));
+		if (field === 'confirmPassword')
+			setConfirmPasswordError(
+				validateConfirmPassword(formValues.password, formValues.confirmPassword)
+			);
+	};
+
+	/**
+	 * Validates the form and updates error state.
+	 * @returns boolean indicating if the form is valid
+	 */
+	const isFormValid = () => {
+		const pwdError = validatePassword(formValues.password);
+		const confirmError = validateConfirmPassword(
+			formValues.password,
+			formValues.confirmPassword
+		);
+		setPasswordError(pwdError);
+		setConfirmPasswordError(confirmError);
+		return !pwdError && !confirmError;
+	};
+
+	/**
+	 * Handles the password reset logic.
+	 */
+	const handleResetPassword = async () => {
 		if (!email) {
 			router.replace('/(auth)/forgot-password');
 			return;
 		}
 
-		if (!email || !formData.password || !formData.confirmPassword) return;
-
-		// Validate again on submit
-		const pwdErr = validatePassword(formData.password);
-		const confirmErr = validateConfirmPassword(
-			formData.password,
-			formData.confirmPassword
-		);
-		setPasswordError(pwdErr);
-		setConfirmPasswordError(confirmErr);
-
-		if (pwdErr || confirmErr) return;
+		if (!isFormValid()) return;
 
 		try {
 			const result = await dispatch(
-				resetPassword({ email, newPassword: formData.password })
+				resetPassword({ email, newPassword: formValues.password })
 			).unwrap();
-			if (result.success) {
-				setModalVisible(true);
-			}
-		} catch (error) {
-			console.error('Reset password error: ', error);
+			if (result.success) setIsModalVisible(true);
+		} catch (err) {
+			console.error('Reset password error:', err);
 		}
 	};
 
+	/**
+	 * Clears global error when screen gains or loses focus.
+	 */
 	useFocusEffect(
 		useCallback(() => {
-			dispatch(clearError()); // clear error when entering
-
-			return () => {
-				dispatch(clearError()); // also clear when leaving
-			};
+			dispatch(clearError());
+			return () => dispatch(clearError());
 		}, [dispatch])
 	);
 
@@ -103,12 +135,13 @@ const ResetPassword = () => {
 		<SafeAreaView className="flex-1 bg-light-screen dark:bg-gray-950">
 			<KeyboardAwareScrollView
 				contentContainerStyle={styles.container}
-				enableOnAndroid={true}
+				enableOnAndroid
 				keyboardShouldPersistTaps="handled"
 				extraScrollHeight={20}
 				showsVerticalScrollIndicator={false}
 			>
 				<View className="main-container">
+					{/* Top Icon */}
 					<View className="flex justify-center items-center mb-2 border border-light-pallete-800 p-3 rounded-[10px]">
 						<Image
 							source={icons.lock}
@@ -117,11 +150,12 @@ const ResetPassword = () => {
 						/>
 					</View>
 
+					{/* Heading and description */}
 					<View
 						className={`items-center ${error ? 'mb-4' : 'mb-8'} pt-4 w-full`}
 					>
 						<Text className="text-3xl font-nexa-heavy text-center mb-3">
-							Enter new password
+							Enter New Password
 						</Text>
 						<Text className="text-body-sm text-center max-w-[80%] leading-5">
 							Your new password must be different from previously used
@@ -129,6 +163,7 @@ const ResetPassword = () => {
 						</Text>
 					</View>
 
+					{/* Global error message */}
 					{error && (
 						<View className="mb-6 p-3 mx-2 bg-red-100 w-full border border-red-300 rounded-lg">
 							<Text className="text-red-700 text-center text-xs font-nexa">
@@ -137,68 +172,48 @@ const ResetPassword = () => {
 						</View>
 					)}
 
+					{/* Password Inputs */}
 					<View className="mb-8 w-full space-y-4">
 						<CustomInputField
 							placeholder="Enter new password"
 							leftIcon={icons.lock}
-							accessibilityLabel="Password input field"
 							editable={!isLoading}
 							returnKeyType="next"
 							autoComplete="new-password"
 							textContentType="newPassword"
-							value={formData.password}
-							onChangeText={(text) => {
-								setFormData({ ...formData, password: text });
-								if (passwordError) {
-									setPasswordError(validatePassword(text)); // live validation
-								}
-							}}
+							value={formValues.password}
+							onChangeText={(text) => handleInputChange('password', text)}
 							secureTextEntry
-							onSubmitEditing={() => confirmPasswordRef.current?.focus()}
-							onFocus={() => {
-								if (error) {
-									dispatch(clearError());
-								}
-								setFocusedField('password');
-							}}
-							ref={passwordRef}
-							onBlur={handlePasswordBlur}
+							onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+							onFocus={() => handleInputFocus('password')}
+							onBlur={() => handleInputBlur('password')}
+							ref={passwordInputRef}
 							isFocused={focusedField === 'password'}
 							error={passwordError}
 							roundedFull
 						/>
 						<CustomInputField
-							placeholder="Confirm new Password"
+							placeholder="Confirm new password"
 							leftIcon={icons.lock}
-							accessibilityLabel="Confirm password input field"
 							editable={!isLoading}
 							returnKeyType="done"
 							autoComplete="new-password"
 							textContentType="newPassword"
-							value={formData.confirmPassword}
-							onChangeText={(text) => {
-								setFormData({ ...formData, confirmPassword: text });
-								if (confirmPasswordError) {
-									setConfirmPasswordError(
-										validateConfirmPassword(formData.password, text)
-									); // live validation
-								}
-							}}
-							ref={confirmPasswordRef}
+							value={formValues.confirmPassword}
+							onChangeText={(text) =>
+								handleInputChange('confirmPassword', text)
+							}
 							secureTextEntry
-							onFocus={() => {
-								if (error) {
-									dispatch(clearError());
-								}
-								setFocusedField('confirmPassword');
-							}}
-							onBlur={handleConfirmPasswordBlur}
+							ref={confirmPasswordInputRef}
+							onFocus={() => handleInputFocus('confirmPassword')}
+							onBlur={() => handleInputBlur('confirmPassword')}
 							isFocused={focusedField === 'confirmPassword'}
 							error={confirmPasswordError}
 							roundedFull
 						/>
 					</View>
 
+					{/* Action Buttons */}
 					<View className="w-full space-y-4">
 						<CustomButton
 							label="Reset Password"
@@ -210,9 +225,7 @@ const ResetPassword = () => {
 						/>
 						<CustomButton
 							label="Cancel"
-							onPress={() => {
-								router.replace('/(auth)/login');
-							}}
+							onPress={() => router.replace('/(auth)/login')}
 							bgVariant="secondary"
 							textVariant="secondary"
 							accessibilityLabel="Button to cancel password reset"
@@ -222,18 +235,17 @@ const ResetPassword = () => {
 				</View>
 			</KeyboardAwareScrollView>
 
-			{/* Modal for password reset success */}
-
+			{/* Success Modal */}
 			<InfoModal
-				visible={false}
+				visible={isModalVisible}
 				type="success"
 				title="Password Reset Success"
 				description="Your password has been reset successfully. You can now log in with your new password."
 				primaryButton={{
 					label: 'Go to Login',
 					onPress: () => {
+						setIsModalVisible(false);
 						dispatch(clearError());
-						setModalVisible(false);
 						router.replace('/(auth)/login');
 					},
 					variant: 'success',
@@ -242,6 +254,7 @@ const ResetPassword = () => {
 		</SafeAreaView>
 	);
 };
+
 const styles = StyleSheet.create({
 	container: {
 		flexGrow: 1,

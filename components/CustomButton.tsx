@@ -11,7 +11,6 @@ import { clsx } from 'clsx';
 import React, { useCallback, useMemo } from 'react';
 import {
 	Image,
-	ImageBackground,
 	Text,
 	TextStyle,
 	TouchableOpacity,
@@ -76,24 +75,13 @@ const CustomButton: React.FC<ButtonProps> = ({
 	buttonStyle,
 	textStyle,
 	iconStyle,
-	rippleColor,
 	borderRadius,
 	fullWidth = false,
 }) => {
 	const theme = useTheme();
 	const colorScheme = useColorScheme();
 	const isDark = theme === 'dark' || colorScheme === 'dark';
-	const isGradient = bgVariant === 'gradient';
 	const isDisabled = disabled || loading;
-
-	// Memoize expensive computations
-	const gradientImage = useMemo(
-		() =>
-			isDark
-				? require('@/assets/images/button-dark.png')
-				: require('@/assets/images/button-light.png'),
-		[isDark]
-	);
 
 	const sizeConfig = SIZE_CONFIG[size as keyof typeof SIZE_CONFIG];
 
@@ -268,37 +256,6 @@ const CustomButton: React.FC<ButtonProps> = ({
 		}),
 		[onPress, isDisabled, loading, accessibilityLabel, label, accessibilityRole]
 	);
-
-	if (isGradient) {
-		return (
-			<ImageBackground
-				source={gradientImage}
-				resizeMode="cover"
-				style={[dynamicStyles, buttonStyle]}
-				className={clsx(
-					'mb-2 overflow-hidden rounded-full justify-center items-center',
-					sizeConfig.height,
-					isDisabled && 'opacity-50',
-					fullWidth && 'w-full'
-				)}
-			>
-				<TouchableOpacity
-					{...touchableProps}
-					style={[
-						{
-							width: '100%',
-							justifyContent: 'center',
-							alignItems: 'center',
-						},
-						dynamicStyles,
-					]}
-					className={clsx('rounded-full', sizeConfig.height)}
-				>
-					{content}
-				</TouchableOpacity>
-			</ImageBackground>
-		);
-	}
 
 	return (
 		<TouchableOpacity

@@ -108,11 +108,11 @@
 
 	/* Interactive Typography */
 	.text-link {
-		@apply text-sm font-nexa-bold  text-light-pallete-600;
+		@apply text-sm font-nexa-bold  text-light-pallete-400 hover:underline;
 	}
 
 	.text-link-lg {
-		@apply text-base font-nexa-bold font-semibol text-light-pallete-500 dark:text-dark-accent underline-offset-2;
+		@apply text-base font-nexa-bold font-semibol text-light-pallete-500 underline-offset-2;
 	}
 
 	/* State Typography */

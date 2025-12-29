@@ -42,9 +42,11 @@ const SectionHeader = ({
 					</TouchableOpacity>
 				)}
 			</View>
-			<Text className="text-xs font-nexa text-gray-500 dark:text-gray-400">
-				{subtitle}
-			</Text>
+			{subtitle && (
+				<Text className="text-xs font-nexa text-gray-500 dark:text-gray-400">
+					{subtitle}
+				</Text>
+			)}
 		</View>
 	);
 };

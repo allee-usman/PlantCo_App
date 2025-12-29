@@ -122,7 +122,6 @@ const BookingCard: React.FC<BookingCardProps> = ({
 			</View>
 
 			{/* Service details */}
-			{/* Service details */}
 			<View className="mb-4 pb-4 border-b border-dashed border-gray-200 dark:border-gray-700">
 				<View className="flex-row justify-between items-start">
 					{/* Left: title + address */}
@@ -134,7 +133,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
 						<View className="flex-row items-start gap-x-1 mt-1">
 							<Image
 								source={icons.locationOutline}
-								className="w-4 h-4 mt-0.5"
+								className="w-4 h-4"
 								tintColor={COLORS.gray[500]}
 							/>
 							<Text
@@ -160,20 +159,6 @@ const BookingCard: React.FC<BookingCardProps> = ({
 					</View>
 				</View>
 			</View>
-
-			{/* Remind me toggle for upcoming bookings */}
-			{/* {booking.status === 'upcoming' && (
-				<View className="flex-row items-center justify-between mb-4">
-					<Text className="text-gray-600 dark:text-gray-400">Remind me</Text>
-					<Switch
-						value={booking.remindMe || false}
-						onValueChange={() => onRemindToggle?.(booking.id)}
-						trackColor={{ false: '#e5e7eb', true: '#10B981' }}
-						thumbColor={booking.remindMe ? '#ffffff' : '#f3f4f6'}
-						ios_backgroundColor="#e5e7eb"
-					/>
-				</View>
-			)} */}
 
 			{/* Action buttons */}
 			<View className="flex-row gap-x-3">

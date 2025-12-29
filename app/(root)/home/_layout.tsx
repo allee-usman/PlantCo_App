@@ -61,15 +61,7 @@ export default function HomeLayout() {
 			<Stack.Screen
 				name="search"
 				options={{
-					headerTitle: 'Search Plants',
-					headerLeft: () => (
-						<TouchableOpacity
-							onPress={() => router.back()}
-							style={{ marginLeft: 10 }}
-						>
-							<Ionicons name="arrow-back" size={24} color={'#000000'} />
-						</TouchableOpacity>
-					),
+					headerShown: false,
 				}}
 			/>
 			<Stack.Screen

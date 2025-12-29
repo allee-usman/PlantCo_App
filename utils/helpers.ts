@@ -14,14 +14,14 @@ export const getBgVariantStyle = (variant: ButtonProps['bgVariant']) => {
 		case 'outline':
 			return 'bg-transparent dark:border-light-pallete-500 border-light-pallete-400 border-[1.5px]';
 		default:
-			return 'bg-light-pallete-300';
+			return 'bg-light-pallete-400 dark:bg-light-pallete-300';
 	}
 };
 
 export const getTextVariantStyle = (variant: ButtonProps['textVariant']) => {
 	switch (variant) {
 		case 'primary':
-			return 'text-white dark:text-gray-950';
+			return 'text-black dark:text-gray-950';
 		case 'secondary':
 			return 'text-gray-700 dark:text-gray-100';
 		case 'danger':
@@ -33,7 +33,7 @@ export const getTextVariantStyle = (variant: ButtonProps['textVariant']) => {
 		case 'outline':
 			return 'dark:text-gray-50 text-gray-700';
 		default:
-			return 'dark:text-gray-950 text-white';
+			return 'dark:text-gray-950 text-black';
 	}
 };
 

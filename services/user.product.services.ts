@@ -12,7 +12,7 @@ export const getWishlistProducts = async (): Promise<IBaseProduct[]> => {
 	const { data } = await api.get<{
 		success: boolean;
 		products: IBaseProduct[];
-	}>('/user/wishlist');
+	}>('/customers/wishlist');
 	return data.products;
 };
 
@@ -21,7 +21,7 @@ export const addToWishlist = async (
 	productId: string
 ): Promise<IBaseProduct[]> => {
 	const { data } = await api.post<{ success: boolean; wishlist: string[] }>(
-		`/user/wishlist/${productId}`
+		`/customers/wishlist/${productId}`
 	);
 	return data.wishlist as unknown as IBaseProduct[];
 };
@@ -31,7 +31,7 @@ export const removeFromWishlist = async (
 	productId: string
 ): Promise<IBaseProduct[]> => {
 	const { data } = await api.delete<{ success: boolean; wishlist: string[] }>(
-		`/user/wishlist/${productId}`
+		`/customers/wishlist/${productId}`
 	);
 	return data.wishlist as unknown as IBaseProduct[];
 };
@@ -59,16 +59,16 @@ export const getRecentlyViewedProducts = async (): Promise<IBaseProduct[]> => {
 	const { data } = await api.get<{
 		success: boolean;
 		products: IBaseProduct[];
-	}>('/user/recently-viewed');
+	}>('/customers/recently-viewed');
 	return data.products;
 };
 
 /** ✅ Add a product to recently viewed */
 export const addRecentlyViewedProduct = async (productId: string) => {
-	await api.post(`/user/recently-viewed/${productId}`);
+	await api.post(`/customers/recently-viewed/${productId}`);
 };
 
 /** ✅ Clear recently viewed list */
 export const clearRecentlyViewedProducts = async () => {
-	await api.delete('/user/recently-viewed');
+	await api.delete('/customers/recently-viewed');
 };

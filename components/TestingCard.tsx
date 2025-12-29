@@ -149,7 +149,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
 	return (
 		<Pressable
 			onPress={onPress}
-			style={{ width: cardWidth, height: cardHeight }}
+			style={{
+				width: cardWidth,
+				height: cardHeight,
+				// iOS shadow
+				shadowColor: '#000',
+				shadowOpacity: 0.08,
+				shadowOffset: { width: 0, height: 2 },
+				shadowRadius: 6,
+
+				// Android shadow
+				elevation: 3,
+			}}
 			className={`bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm ${
 				className || ''
 			}`}

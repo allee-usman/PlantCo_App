@@ -135,7 +135,7 @@ const ProfileScreen: React.FC = () => {
 						id: 'bookings',
 						title: 'My Bookings',
 						icon: icons.calendar,
-						iconSize: 24,
+						iconSize: 18,
 					},
 				],
 			},

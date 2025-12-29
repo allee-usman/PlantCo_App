@@ -37,8 +37,7 @@ const CategoriesSection: React.FC<ServiceCategoriesProps> = ({
 	return (
 		<View>
 			{/* Header */}
-
-			<View className="px-4 mb-2">
+			<View className="px-4">
 				<SectionHeader
 					label="Quick Categories"
 					rightButton

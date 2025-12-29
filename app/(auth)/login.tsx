@@ -1,3 +1,26 @@
+import { Ionicons } from '@expo/vector-icons';
+import { unwrapResult } from '@reduxjs/toolkit';
+import { Link, router, useFocusEffect } from 'expo-router';
+import { useColorScheme } from 'nativewind';
+import React, {
+	useCallback,
+	useMemo,
+	useReducer,
+	useRef,
+	useState,
+} from 'react';
+import {
+	Image,
+	StatusBar,
+	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
+} from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import Alert from '@/components/Alert';
 import CustomButton from '@/components/CustomButton';
 import CustomInputField from '@/components/CustomInputField';
@@ -10,129 +33,169 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { clearError, loginUser } from '@/redux/slices/authSlice';
 import { RootState } from '@/redux/store';
 import { validateEmail, validatePassword } from '@/utils/validations';
-import { Ionicons } from '@expo/vector-icons';
-import { unwrapResult } from '@reduxjs/toolkit';
-import { Link, router, useFocusEffect } from 'expo-router';
-import { useColorScheme } from 'nativewind';
-import React, { useCallback, useRef, useState } from 'react';
-import {
-	Image,
-	StatusBar,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
-} from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
+//interface
 interface SigninFormTypes {
 	email: string;
 	password: string;
 	rememberMe: boolean;
 }
 
+// Custom hook: handles validation + error state
+function useLoginValidation() {
+	const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+		{}
+	);
+
+	/** Validate entire form */
+	const validateForm = useCallback((data: SigninFormTypes) => {
+		const email = validateEmail(data.email);
+		const password = validatePassword(data.password);
+
+		const newErrors = {
+			email: email || undefined,
+			password: password || undefined,
+		};
+
+		setErrors(newErrors);
+		return newErrors;
+	}, []);
+
+	/** clear a single field error on change */
+	const clearFieldError = useCallback((field: keyof SigninFormTypes) => {
+		setErrors((prev) => ({ ...prev, [field]: undefined }));
+	}, []);
+
+	return { errors, setErrors, validateForm, clearFieldError };
+}
+
+// Reducer: groups UI state
+type UIState = {
+	showPassword: boolean;
+	wasSubmitted: boolean;
+	showModal: boolean;
+	focusedField: keyof SigninFormTypes | null;
+	pendingEmail: string | null;
+};
+
+const initialUIState: UIState = {
+	showPassword: true,
+	wasSubmitted: false,
+	showModal: false,
+	focusedField: null,
+	pendingEmail: null,
+};
+
+type UIAction =
+	| { type: 'TOGGLE_PASSWORD' }
+	| { type: 'SET_SUBMITTED' }
+	| { type: 'FOCUS'; field: keyof SigninFormTypes }
+	| { type: 'BLUR' }
+	| { type: 'SHOW_MODAL'; email: string }
+	| { type: 'HIDE_MODAL' };
+
+function uiReducer(state: UIState, action: UIAction): UIState {
+	switch (action.type) {
+		case 'TOGGLE_PASSWORD':
+			return { ...state, showPassword: !state.showPassword };
+		case 'SET_SUBMITTED':
+			return { ...state, wasSubmitted: true };
+		case 'FOCUS':
+			return { ...state, focusedField: action.field };
+		case 'BLUR':
+			return { ...state, focusedField: null };
+		case 'SHOW_MODAL':
+			return { ...state, showModal: true, pendingEmail: action.email };
+		case 'HIDE_MODAL':
+			return { ...state, showModal: false };
+		default:
+			return state;
+	}
+}
+
 export default function LoginScreen() {
+	const dispatch = useAppDispatch();
 	const { colorScheme } = useColorScheme();
 	const isDark = colorScheme === 'dark';
-	// states
-	const [formData, setFormData] = useState<SigninFormTypes>({
-		//TODO: remove hardcoded values when testing is done
-		email: 'aliusman429040@gmail.com',
-		password: 'Password123!',
-		rememberMe: true,
-	});
-	const [showPassword, setShowPassword] = useState<boolean>(true);
-	const [focusedField, setFocusedField] = useState<string | null>(null);
-	const [formErrors, setFormErrors] = useState<{
-		email?: string;
-		password?: string;
-	}>({});
 
-	const [wasSubmitted, setWasSubmitted] = useState(false);
-	const [showModal, setShowModal] = useState(false);
-	const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-
-	// Refs for chaining
-	const passwordRef = useRef<TextInput>(null);
-
-	// redux
-	const dispatch = useAppDispatch();
+	// Redux state
 	const { isLoading, error } = useAppSelector((state: RootState) => state.auth);
 
+	// Form data
+	const initialForm: SigninFormTypes = __DEV__
+		? {
+				email: 'aliusman429040@gmail.com',
+				password: 'Password123!',
+				rememberMe: true,
+		  }
+		: { email: '', password: '', rememberMe: false };
+
+	const [formData, setFormData] = useState<SigninFormTypes>(initialForm);
+
+	// Validation hook
+	const { errors, validateForm, clearFieldError } = useLoginValidation();
+
+	// UI reducer state
+	const [ui, uiDispatch] = useReducer(uiReducer, initialUIState);
+
+	// Refs
+	const passwordRef = useRef<TextInput>(null);
+
+	// Clear API error on screen focus
 	useFocusEffect(
 		useCallback(() => {
-			dispatch(clearError()); // clear error when entering
-
-			return () => {
-				dispatch(clearError()); // also clear when leaving
-			};
+			dispatch(clearError());
+			return () => dispatch(clearError());
 		}, [dispatch])
 	);
 
-	const handleFormDataChange = (
-		field: keyof SigninFormTypes,
-		value: string
-	) => {
-		setFormData((prev) => ({
-			...prev,
-			[field]: value,
-		}));
+	// Update form field
+	const handleChange = useCallback(
+		(field: keyof SigninFormTypes, value: string) => {
+			setFormData((prev) => ({ ...prev, [field]: value }));
 
-		// Clear error if field is being edited
-		if (error) {
-			dispatch(clearError());
-		}
+			// clear API errors on input
+			if (error) dispatch(clearError());
 
-		switch (field) {
-			case 'email':
-				if (formErrors.email)
-					setFormErrors((prev) => ({ ...prev, email: undefined }));
-				break;
-			case 'password':
-				if (formErrors.password)
-					setFormErrors((prev) => ({ ...prev, password: undefined }));
-				break;
-		}
-	};
+			// clear field validation error as user types
+			clearFieldError(field);
+		},
+		[dispatch, error, clearFieldError]
+	);
 
-	// handleEmailBlur
-	const handleEmailBlur = () => {
-		setFocusedField(null);
-		if (formData.email || wasSubmitted) {
-			const error = validateEmail(formData.email);
-			setFormErrors((prev) => ({ ...prev, email: error || undefined }));
-		}
-	};
+	// Focus helpers to reduce duplication
+	const handleFocus = useCallback(
+		(field: keyof SigninFormTypes) => () =>
+			uiDispatch({ type: 'FOCUS', field }),
+		[]
+	);
 
-	// handlePasswordBlur
-	const handlePasswordBlur = () => {
-		setFocusedField(null);
-		if (formData.password || wasSubmitted) {
-			const error = validatePassword(formData.password);
-			setFormErrors((prev) => ({ ...prev, password: error || undefined }));
-		}
-	};
+	const handleBlur = useCallback(() => uiDispatch({ type: 'BLUR' }), []);
 
-	const handleLogin = async () => {
-		setWasSubmitted(true);
+	//Toggle remember me
+	const toggleRememberMe = useCallback(
+		() =>
+			setFormData((prev) => ({
+				...prev,
+				rememberMe: !prev.rememberMe,
+			})),
+		[]
+	);
 
-		if (error) {
-			dispatch(clearError());
-		}
+	// Navigation helpers (cleaner than inline lambdas)
+	const goToForgotPassword = () => router.push('/(auth)/forgot-password');
 
-		const emailValidationError = validateEmail(formData.email);
-		const passwordValidationError = validatePassword(formData.password);
+	// Submit login
+	const handleLogin = useCallback(async () => {
+		uiDispatch({ type: 'SET_SUBMITTED' });
 
-		setFormErrors({
-			email: emailValidationError || undefined,
-			password: passwordValidationError || undefined,
-		});
+		if (error) dispatch(clearError());
 
-		// if errors, don't proceed
-		if (emailValidationError || passwordValidationError) {
-			return;
-		}
+		// validate all fields at once
+		const validationErrors = validateForm(formData);
+
+		// stop if any error exists
+		if (validationErrors.email || validationErrors.password) return;
 
 		const action = await dispatch(
 			loginUser({
@@ -143,16 +206,36 @@ export default function LoginScreen() {
 		);
 
 		try {
-			const resData = unwrapResult(action);
-			if (resData.user && !resData.user.isVerified) {
-				setPendingEmail(resData.user.email ?? formData.email);
-				setShowModal(true);
+			const res = unwrapResult(action);
+
+			// show verification modal if not verified
+			if (res.user && !res.user.isVerified) {
+				uiDispatch({
+					type: 'SHOW_MODAL',
+					email: res.user.email ?? formData.email,
+				});
 			} else {
 				router.replace('/(root)/home');
 			}
 		} catch (err) {
-			console.error('Login error: ', err);
+			console.error('Login error:', err);
 		}
+	}, [dispatch, formData, validateForm, error]);
+
+	// Memoized static resources
+	const illustrationImage = useMemo(() => images.ilustration1, []);
+
+	const handleModalContinue = () => {
+		uiDispatch({ type: 'HIDE_MODAL' });
+
+		router.push({
+			pathname: '/(auth)/verify-otp',
+			params: {
+				email: ui.pendingEmail ?? formData.email,
+				context: 'auth',
+				startCountdown: 'true',
+			},
+		});
 	};
 
 	return (
@@ -161,91 +244,85 @@ export default function LoginScreen() {
 				backgroundColor="transparent"
 				barStyle={isDark ? 'light-content' : 'dark-content'}
 			/>
+
 			<KeyboardAwareScrollView
 				contentContainerStyle={styles.container}
-				enableOnAndroid={true}
+				enableOnAndroid
 				keyboardShouldPersistTaps="handled"
 				extraScrollHeight={20}
 				showsVerticalScrollIndicator={false}
 			>
-				<View className="main-container px-6">
-					<View className="z-0 w-full flex justify-center items-center mb-2">
+				<View className="px-6">
+					{/* Illustration */}
+					<View className="items-center mb-2">
 						<Image
-							source={images.ilustration1}
+							source={illustrationImage}
 							className="h-[200px]"
 							resizeMode="contain"
-							alt="Illustration"
 						/>
 					</View>
-					<View className={`${error ? 'mb-4' : 'mb-8'} pt-4 w-full`}>
+
+					{/* Titles */}
+					<View className={`${error ? 'mb-4' : 'mb-8'} pt-4`}>
 						<Text className="text-title text-center">Welcome</Text>
 						<Text className="text-body text-center">
 							Glad you&apos;re back!
 						</Text>
 					</View>
-					{/* {__DEV__ && (
-						<Button
-							title="Reset App Data"
-							onPress={() => {
-								resetAppData();
-								alert('App data cleared!');
-							}}
-						/>
-					)} */}
 
+					{/* API error */}
 					{error && <Alert variant="error" message={error} />}
 
-					<View className="mb-6 w-full">
+					{/* Form */}
+					<View className="mb-6">
+						{/* Email */}
 						<CustomInputField
 							placeholder="Email"
 							keyboardType="email-address"
 							autoCapitalize={AutoCapitalize.NONE}
-							autoComplete="email"
 							textContentType={TextContentType.EMAIL_ADDRESS}
+							autoComplete="email"
 							returnKeyType="next"
-							accessibilityLabel="Email input field"
 							value={formData.email}
 							leftIcon={icons.email}
-							onChangeText={(text) => handleFormDataChange('email', text)}
+							onChangeText={(text) => handleChange('email', text)}
+							onFocus={handleFocus('email')}
+							onBlur={handleBlur}
 							onSubmitEditing={() => passwordRef.current?.focus()}
-							onFocus={() => setFocusedField('email')}
-							onBlur={handleEmailBlur}
-							isFocused={focusedField === 'email'}
-							error={formErrors.email}
 							editable={!isLoading}
+							isFocused={ui.focusedField === 'email'}
+							error={errors.email}
 							roundedFull
 						/>
 
+						{/* Password */}
 						<CustomInputField
+							ref={passwordRef}
 							placeholder="Password"
-							accessibilityLabel="Password input field"
-							editable={!isLoading}
-							returnKeyType="done"
-							autoComplete="password"
-							leftIcon={icons.lock}
-							textContentType={TextContentType.PASSWORD}
 							value={formData.password}
-							onChangeText={(text) => handleFormDataChange('password', text)}
-							secureTextEntry={showPassword}
-							onRightIconPress={() => setShowPassword((prev) => !prev)}
-							onFocus={() => setFocusedField('password')}
-							onBlur={handlePasswordBlur}
-							isFocused={focusedField === 'password'}
-							error={formErrors.password}
+							autoComplete="password"
+							textContentType={TextContentType.PASSWORD}
+							returnKeyType="done"
+							editable={!isLoading}
+							leftIcon={icons.lock}
+							secureTextEntry={ui.showPassword}
+							onRightIconPress={() => uiDispatch({ type: 'TOGGLE_PASSWORD' })}
+							onChangeText={(text) => handleChange('password', text)}
+							onFocus={handleFocus('password')}
+							onBlur={handleBlur}
 							onSubmitEditing={handleLogin}
+							isFocused={ui.focusedField === 'password'}
+							error={errors.password}
 							roundedFull
 						/>
 
-						<View className="flex-row items-center justify-between mb-8">
+						{/* Remember + forgot password */}
+						<View className="flex-row justify-between mb-8">
 							<TouchableOpacity
 								className="flex-row items-center"
-								onPress={() =>
-									setFormData({ ...formData, rememberMe: !formData.rememberMe })
-								}
-								disabled={isLoading}
+								onPress={toggleRememberMe}
 								activeOpacity={0.7}
-								accessible={true}
-								accessibilityLabel="Toggle remember me"
+								disabled={isLoading}
 							>
 								<View
 									className={`w-[18px] h-[18px] rounded-full border-[1.5px] items-center justify-center ${
@@ -261,69 +338,50 @@ export default function LoginScreen() {
 								<Text className="ml-2 text-body-sm">Remember me</Text>
 							</TouchableOpacity>
 
-							<TouchableOpacity
-								onPress={() => {
-									router.push('/(auth)/forgot-password');
-								}}
-								disabled={isLoading}
-								accessible={true}
-								accessibilityLabel="Go to forgot password screen"
-							>
-								<Text className="underline text-body-xs text-light-pallete-600 font-nexa-bold">
+							<TouchableOpacity onPress={goToForgotPassword}>
+								<Text className="underline text-body-sm text-light-pallete-400 font-nexa-bold">
 									Forgot Password?
 								</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
-					<View className="w-full">
-						<CustomButton
-							label="Login"
-							onPress={handleLogin}
-							loading={isLoading}
-							disabled={isLoading}
-							size="md"
-							accessibilityLabel="Log in to your account"
-							accessibilityRole="button"
-						/>
 
-						<View className="flex-row justify-center mt-2">
-							<Link
-								href="/(auth)/signup"
-								disabled={isLoading}
-								className="text-body-sm"
-								onPress={() => error && dispatch(clearError())}
-							>
-								Don&apos;t have an account?{' '}
-								<Text className="text-link font-nexa-extrabold">Sign up</Text>
-							</Link>
-						</View>
+					{/* Login button */}
+					<CustomButton
+						label="Login"
+						onPress={handleLogin}
+						loading={isLoading}
+						disabled={isLoading}
+						size="md"
+					/>
+
+					{/* Signup link */}
+					<View className="flex-row justify-center mt-2">
+						<Link
+							href="/(auth)/signup"
+							className="text-body-sm"
+							onPress={() => error && dispatch(clearError())}
+						>
+							Don&apos;t have an account?{' '}
+							<Text className="text-link font-nexa-extrabold">Sign up</Text>
+						</Link>
 					</View>
 				</View>
 			</KeyboardAwareScrollView>
+
+			{/* Verification Modal */}
 			<DynamicModal
-				visible={showModal}
+				visible={ui.showModal}
 				title="Email Verification Needed"
-				description="We sent you a verification email. Please check your inbox to verify your account."
+				description="We sent you a verification email. Please check your inbox."
 				icon={<Ionicons name="information-circle" size={70} color="#F59E0B" />}
 				primaryButton={{
 					label: 'Continue',
-					onPress: () => {
-						setShowModal(false);
-						router.push({
-							pathname: '/(auth)/verify-otp',
-							params: {
-								email: pendingEmail ?? formData.email,
-								context: 'auth',
-								startCountdown: 'true',
-							},
-						});
-					},
-					className: 'bg-green-600',
-					textClassName: 'text-white',
+					onPress: handleModalContinue,
 				}}
 				secondaryButton={{
 					label: 'Close',
-					onPress: () => setShowModal(false),
+					onPress: () => uiDispatch({ type: 'HIDE_MODAL' }),
 				}}
 			/>
 		</SafeAreaView>
